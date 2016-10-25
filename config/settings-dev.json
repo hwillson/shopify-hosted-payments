@@ -1,0 +1,9 @@
+{
+  "public": {
+    "paymentPage": {
+      "companyName": "Some Company Inc.",
+      "companyLogoUrl": "/images/test_logo.png",
+      "backgroundImageUrl": "/images/test_background.jpg"
+    }
+  }
+}
