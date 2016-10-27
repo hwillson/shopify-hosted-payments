@@ -1,4 +1,5 @@
 import { ValidatedMethod } from 'meteor/mdg:validated-method';
+import StripeKeys from './stripe_keys';
 
 const getStripeKey = new ValidatedMethod({
   name: 'environment.getStripeKey',
@@ -6,7 +7,7 @@ const getStripeKey = new ValidatedMethod({
   run() {
     let stripeKey;
     if (!this.isSimulation) {
-      stripeKey = process.env.STRIPE_KEY;
+      stripeKey = StripeKeys.public;
     }
     return stripeKey;
   },

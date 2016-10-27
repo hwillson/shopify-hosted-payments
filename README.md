@@ -18,10 +18,10 @@ meteor npm install
 
 ### Development
 
-First get your Stripe "Test Publishable Key" from the Stripe admin. The run the following:
+First get your Stripe test publishable and secret keys from the Stripe admin. Then make sure you have your Shopify hosted payment HMAC key handy. With these values run the following:
 
 ```
-STRIPE_KEY=pk_test_jNAR8E9b213jKUd32gfRpRo meteor npm start
+STRIPE_PUB_KEY=pk_test_jNAR8E9b213jKUd32gfRpRo STRIPE_SECRET_KEY=sk_test_jNAR8E9b213jKUd32gfRpRo SHOPIFY_HMAC_KEY=something meteor npm start
 ```
 
 You can then access the hosted payment page at [http://localhost:3000](). Stripe keys are intentionally not committed to Git.

@@ -2,10 +2,13 @@
   "name": "shopify-hosted-payments",
   "private": true,
   "scripts": {
-    "start": "meteor --settings=config/settings-dev.json"
+    "start": "meteor --settings=config/settings-dev.json",
+    "test": "meteor test --port=3100 --driver-package practicalmeteor:mocha"
   },
   "dependencies": {
     "aphrodite": "^1.0.0",
+    "body-parser": "^1.15.2",
+    "crypto-js": "^3.1.7",
     "meteor-node-stubs": "~0.2.0",
     "react": "^15.3.2",
     "react-dom": "^15.3.2",
@@ -41,6 +44,7 @@
     "rules": {
       "import/no-extraneous-dependencies": "off",
       "import/extensions": "off",
+      "import/newline-after-import": "off",
       "object-shorthand": [
         "error",
         "always",
@@ -64,7 +68,8 @@
           ]
         }
       ],
-      "react/no-find-dom-node": 0
+      "react/no-find-dom-node": "off",
+      "global-require": "off"
     },
     "settings": {
       "import/resolver": "meteor"

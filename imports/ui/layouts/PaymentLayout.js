@@ -5,6 +5,7 @@ import { Meteor } from 'meteor/meteor';
 import { StyleSheet, css } from 'aphrodite';
 
 import getStripeKey from '../../api/environment/methods';
+import createCharge from '../../api/charges/methods';
 import Logo from '../components/Logo';
 
 let styles;
@@ -25,9 +26,11 @@ class PaymentLayout extends Component {
       key: stripeKey,
       locale: 'auto',
       token(token) {
-        // You can access the token ID with `token.id`.
-        // Get the token ID to your server-side code for use.
-        console.log(`Token ID: ${token.id}`);
+        if (token) {
+          createCharge.call({ tokenId: token.id }, (error, response) => {
+            console.log(error, response);
+          });
+        }
       },
     });
 

@@ -1,5 +1,6 @@
 import { ValidatedMethod } from 'meteor/mdg:validated-method';
 import { SimpleSchema } from 'meteor/aldeed:simple-schema';
+import StripeKeys from '../environment/stripe_keys';
 
 const createCharge = new ValidatedMethod({
   name: 'charges.createCharge',
@@ -9,19 +10,16 @@ const createCharge = new ValidatedMethod({
     },
   }).validator(),
   run({ tokenId }) {
-    if (!this.isSimluation) {
-      import stripe from 'stripe';
-
-      console.log(stripe);
-
-      // stripe.charges.create({
-      //   amount: 2000,
-      //   currency: "usd",
-      //   source: "tok_9R6muwB4ojVyZB", // obtained with Stripe.js
-      //   description: "Charge for avery.martinez@example.com"
-      // }, function(err, charge) {
-      //   // asynchronously called
-      // });
+    if (!this.isSimulation) {
+      const stripe = require('stripe')(StripeKeys.private);
+      stripe.charges.create({
+        amount: 1000,
+        currency: 'usd',
+        source: tokenId,
+        description: 'Charge for order 123',
+      }, (error, charge) => {
+        console.log(error, charge);
+      });
     }
   },
 });
