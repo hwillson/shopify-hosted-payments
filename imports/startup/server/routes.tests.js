@@ -3,8 +3,10 @@
 
 import { expect } from 'meteor/practicalmeteor:chai';
 import { _ } from 'meteor/underscore';
+import StubCollections from 'meteor/hwillson:stub-collections';
 
 import RouteHandler from './routes';
+import Payments from '../../api/payments/collection';
 
 const SHOPIFY_HMAC_KEY = 'test';
 
@@ -49,6 +51,14 @@ describe('startup.routes.RouteHandler', function () {
       process.env.SHOPIFY_HMAC_KEY = SHOPIFY_HMAC_KEY;
     });
 
+    beforeEach(function () {
+      StubCollections.stub([Payments]);
+    });
+
+    afterEach(function () {
+      StubCollections.restore();
+    });
+
     it('should redirect to shopify if signature is invalid', function () {
       const invalidRequest = JSON.parse(JSON.stringify(validRequest));
       invalidRequest.body.x_signature = 'invalid';
@@ -66,11 +76,24 @@ describe('startup.routes.RouteHandler', function () {
       expect(responseStub.success).to.be.true;
     });
 
-    it('should redirect to "/" if signature is valid', function () {
+    it(
+      'should store incoming payment information in the Payments collection',
+      function () {
+        const responseStub = {
+          writeHead() {},
+          end() {},
+        };
+        expect(Payments.find().count()).to.equal(0);
+        RouteHandler.incomingPayment(null, validRequest, responseStub);
+        expect(Payments.find().count()).to.equal(1);
+      }
+    );
+
+    it('should redirect to "/?id=something" if signature is valid', function () {
       const responseStub = {
         success: false,
         writeHead(code, options) {
-          if (options.Location === '/') {
+          if (options.Location.match(/\/\?id=.*/)) {
             this.success = true;
           }
         },

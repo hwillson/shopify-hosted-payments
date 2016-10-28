@@ -20,3 +20,6 @@ aldeed:simple-schema
 meteorhacks:picker
 practicalmeteor:mocha
 practicalmeteor:chai
+hwillson:stub-collections
+react-meteor-data
+check
