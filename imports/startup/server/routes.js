@@ -27,10 +27,18 @@ const RouteHandler = {
   },
 };
 
+Picker.middleware(bodyParser.json());
 Picker.middleware(bodyParser.urlencoded({ extended: false }));
+
 Picker.route(
   '/incoming-payment',
   (params, req, res) => RouteHandler.incomingPayment(params, req, res)
 );
+
+// TODO - temp to test webhook
+// see if I can read in custom line items added to order to represent subscription
+Picker.route('/order-payment', (params, req, res) => {
+  console.log(req.body);
+});
 
 export default RouteHandler;

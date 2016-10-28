@@ -2,9 +2,10 @@
   "public": {
     "paymentPage": {
       "companyName": "Some Company Inc.",
-      "companyLogoUrl": "/images/test_logo.png",
-      "backgroundImageUrl": "/images/test_background.jpg",
-      "checkoutUrl": "https://www.somecompany.com/checkout/"
+      "siteUrl": "https://www.somecompany.com",
+      "checkoutUrl": "https://www.somecompany.com/checkout/",
+      "paymentGatewayName": "Some Company - Payments",
+      "paymentGatewayLogo": "https://www.somecompany.com/some_logo.png"
     }
   }
 }
