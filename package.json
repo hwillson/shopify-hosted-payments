@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "start": "meteor --settings=config/settings-dev.json",
-    "test": "meteor test --port=3100 --driver-package practicalmeteor:mocha"
+    "test": "STRIPE_TEST_PUB_KEY=pk_test_fake STRIPE_TEST_SECRET_KEY=sk_test_fake STRIPE_LIVE_PUB_KEY=pk_live_fake STRIPE_LIVE_SECRET_KEY=sk_live_fake meteor test --port=3100 --driver-package practicalmeteor:mocha"
   },
   "dependencies": {
     "aphrodite": "^1.0.0",
@@ -47,6 +47,7 @@
       "import/no-extraneous-dependencies": "off",
       "import/extensions": "off",
       "import/newline-after-import": "off",
+      "import/no-unresolved": "off",
       "object-shorthand": [
         "error",
         "always",

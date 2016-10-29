@@ -1,7 +1,6 @@
 import { Meteor } from 'meteor/meteor';
 import { ValidatedMethod } from 'meteor/mdg:validated-method';
 import { SimpleSchema } from 'meteor/aldeed:simple-schema';
-import StripeKeys from '../environment/stripe_keys';
 import Payments from './collection';
 
 const makePayment = new ValidatedMethod({
@@ -20,6 +19,7 @@ const makePayment = new ValidatedMethod({
   run({ tokenId, payment }) {
     let queryString;
     if (!this.isSimulation) {
+      import StripeKeys from '../environment/server/stripe_keys';
       const stripe = require('stripe')(StripeKeys.private);
       const stripeChargesCreateSync =
         Meteor.wrapAsync(stripe.charges.create, stripe.charges);

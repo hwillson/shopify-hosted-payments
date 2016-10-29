@@ -1,16 +1,21 @@
 import { ValidatedMethod } from 'meteor/mdg:validated-method';
-import StripeKeys from './stripe_keys';
+import { SimpleSchema } from 'meteor/aldeed:simple-schema';
 
-const getStripeKey = new ValidatedMethod({
-  name: 'environment.getStripeKey',
-  validate: null,
-  run() {
-    let stripeKey;
+const getStripePubKey = new ValidatedMethod({
+  name: 'environment.getStripePubKey',
+  validate: new SimpleSchema({
+    testMode: {
+      type: Boolean,
+    },
+  }).validator(),
+  run({ testMode }) {
+    let stripePubKey;
     if (!this.isSimulation) {
-      stripeKey = StripeKeys.public;
+      import StripeKeys from './server/stripe_keys';
+      stripePubKey = (testMode) ? StripeKeys.testPublic : StripeKeys.livePublic;
     }
-    return stripeKey;
+    return stripePubKey;
   },
 });
 
-export default getStripeKey;
+export default getStripePubKey;

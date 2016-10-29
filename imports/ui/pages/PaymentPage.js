@@ -4,7 +4,7 @@ import React, { Component } from 'react';
 import { Meteor } from 'meteor/meteor';
 import { StyleSheet, css } from 'aphrodite';
 
-import getStripeKey from '../../api/environment/methods';
+import getStripePubKey from '../../api/environment/methods';
 import makePayment from '../../api/payments/methods';
 import Sidebar from '../components/sidebar/Sidebar';
 import Breadcrumb from '../components/breadcrumb/Breadcrumb';
@@ -26,9 +26,16 @@ class PaymentPage extends Component {
 
   componentWillReceiveProps(newProps) {
     if (!newProps.loading) {
-      getStripeKey.call((error, stripeKey) => {
-        this.initializeStripeCheckout(stripeKey);
-      });
+      getStripePubKey.call(
+        { testMode: (newProps.payment.x_test === 'true') },
+        (error, stripeKey) => {
+          if (error) {
+            throw error;
+          } else {
+            this.initializeStripeCheckout(stripeKey);
+          }
+        }
+      );
     }
   }
 
@@ -37,33 +44,35 @@ class PaymentPage extends Component {
   }
 
   initializeStripeCheckout(stripeKey) {
-    const payment = this.props.payment;
-    const self = this;
-    this.stripeHandler = StripeCheckout.configure({
-      key: stripeKey,
-      locale: 'auto',
-      token(token) {
-        self.setState({
-          processingPayment: true,
-        });
-        if (token) {
-          makePayment.call({
-            tokenId: token.id,
-            payment,
-          }, (error, queryString) => {
-            if (!error) {
-              window.location.replace(
-                `${payment.x_url_complete}?${queryString}`
-              );
-              // TODO - also post async (see
-              // https://help.shopify.com/api/sdks/hosted-payment-sdk/checkout-process)
-            }
+    if (stripeKey) {
+      const payment = this.props.payment;
+      const self = this;
+      this.stripeHandler = StripeCheckout.configure({
+        key: stripeKey,
+        locale: 'auto',
+        token(token) {
+          self.setState({
+            processingPayment: true,
           });
-        }
-      },
-    });
+          if (token) {
+            makePayment.call({
+              tokenId: token.id,
+              payment,
+            }, (error, queryString) => {
+              if (!error) {
+                window.location.replace(
+                  `${payment.x_url_complete}?${queryString}`
+                );
+                // TODO - also post async (see
+                // https://help.shopify.com/api/sdks/hosted-payment-sdk/checkout-process)
+              }
+            });
+          }
+        },
+      });
 
-    this.openStripeCheckout();
+      this.openStripeCheckout();
+    }
   }
 
   openStripeCheckout(event) {

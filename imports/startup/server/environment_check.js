@@ -1,7 +1,9 @@
 // Make sure necessary environment variables are defined and available
 const mandatoryEnvVars = [
-  'STRIPE_PUB_KEY',
-  'STRIPE_SECRET_KEY',
+  'STRIPE_TEST_PUB_KEY',
+  'STRIPE_TEST_SECRET_KEY',
+  'STRIPE_LIVE_PUB_KEY',
+  'STRIPE_LIVE_SECRET_KEY',
   'SHOPIFY_HMAC_KEY',
 ];
 mandatoryEnvVars.forEach((envVar) => {
