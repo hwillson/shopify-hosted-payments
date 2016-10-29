@@ -3,7 +3,6 @@
     "paymentPage": {
       "companyName": "Some Company Inc.",
       "siteUrl": "https://www.somecompany.com",
-      "checkoutUrl": "https://www.somecompany.com/checkout/",
       "paymentGatewayName": "Some Company - Payments",
       "paymentGatewayLogo": "https://www.somecompany.com/some_logo.png"
     }
