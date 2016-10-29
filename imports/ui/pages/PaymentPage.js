@@ -128,7 +128,7 @@ class PaymentPage extends Component {
       <div className={css(styles.paymentPage)}>
         <div className={`content ${css(styles.content)}`}>
           <div className="wrap">
-            <Sidebar />
+            <Sidebar payment={this.props.payment} />
             <div className="main" role="main">
               <div className="main__header">
                 <a
