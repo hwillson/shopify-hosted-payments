@@ -25,7 +25,7 @@ class PaymentPage extends Component {
   }
 
   componentWillReceiveProps(newProps) {
-    if (!newProps.loading) {
+    if (!newProps.loading && !this.state.processingPayment) {
       getStripePubKey.call(
         { testMode: (newProps.payment.x_test === 'true') },
         (error, stripeKey) => {
