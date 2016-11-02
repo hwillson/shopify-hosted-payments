@@ -23,3 +23,4 @@ practicalmeteor:chai
 hwillson:stub-collections
 react-meteor-data
 check
+aldeed:collection2
