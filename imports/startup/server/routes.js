@@ -48,55 +48,56 @@ const RouteHandler = {
         payment.x_url_complete.replace('/offsite_gateway_callback', '');
       const tokenData = Tokens.findOne({ checkoutUrl });
 
-      // Save incoming Shopify request payment details for reference
-      payment.token = tokenData.token;
-      payment.timestamp = new Date();
-      const paymentId = Payments.insert(payment);
+      if (tokenData) {
+        // Save incoming Shopify request payment details for reference
+        payment.token = tokenData.token;
+        payment.timestamp = new Date();
+        const paymentId = Payments.insert(payment);
 
-      const stripe = require('stripe')(
-        (payment.x_test === 'true')
-          ? StripeKeys.testSecret
-          : StripeKeys.liveSecret
-      );
-
-      try {
-        // Create the Stripe charge
-        const charge = stripe.charges.create({
-          amount: payment.x_amount * 100,
-          currency: 'usd',
-          source: tokenData.token,
-          description: `Charge for ${payment.x_description}`,
-        });
-
-        // Updated saved payment details with successful Stripe charge
-        // reference information
-        Payments.update(
-          { _id: paymentId },
-          { $set: { status: 'completed', charge, error: null } }
+        const stripe = require('stripe')(
+          (payment.x_test === 'true')
+            ? StripeKeys.testSecret
+            : StripeKeys.liveSecret
         );
 
-        // Prepare response data and post back to Shopify
-        const shopifyResponse = Object.create(ShopifyResponse);
-        shopifyResponse.init(payment);
-        res.writeHead(302, {
-          Location: `${payment.x_url_complete}?${shopifyResponse.queryString()}`,
-        });
-      } catch (error) {
-        // Unable to create Stripe charge so save error details with payment
-        // information and redirect back to the Shopify request cancel URL
-        Payments.update(
-          { _id: paymentId },
-          { $set: { status: 'failed', error, charge: null } }
-        );
-        res.writeHead(302, {
-          Location: payment.x_url_cancel,
-        });
+        try {
+          // Create the Stripe charge
+          const charge = stripe.charges.create({
+            amount: payment.x_amount * 100,
+            currency: 'usd',
+            source: tokenData.token,
+            description: `Charge for ${payment.x_description}`,
+          });
+
+          // Updated saved payment details with successful Stripe charge
+          // reference information
+          Payments.update(
+            { _id: paymentId },
+            { $set: { status: 'completed', charge, error: null } }
+          );
+
+          // Prepare response data and post back to Shopify
+          const shopifyResponse = Object.create(ShopifyResponse);
+          shopifyResponse.init(payment);
+          res.writeHead(302, {
+            Location: `${payment.x_url_complete}?${shopifyResponse.queryString()}`,
+          });
+        } catch (error) {
+          // Unable to create Stripe charge so save error details with payment
+          // information and redirect back to the Shopify request cancel URL
+          Payments.update(
+            { _id: paymentId },
+            { $set: { status: 'failed', error, charge: null } }
+          );
+          res.writeHead(302, { Location: payment.x_url_cancel });
+        }
+      } else {
+        // Missing token; redirect to shopify cancel URL
+        res.writeHead(302, { Location: payment.x_url_cancel });
       }
     } else {
       // Invalid signature; redirect to shopify cancel URL
-      res.writeHead(302, {
-        Location: payment.x_url_cancel,
-      });
+      res.writeHead(302, { Location: payment.x_url_cancel });
     }
 
     res.end();
@@ -116,11 +117,13 @@ Picker.route(
   (params, req, res) => RouteHandler.incomingPaymentWithToken(params, req, res)
 );
 
-Picker.route('/incoming-token', (params, req) => {
+Picker.route('/incoming-token', (params, req, res) => {
   const tokenData = req.body;
   if (tokenData) {
     Tokens.insert(tokenData);
   }
+  res.setHeader('Access-Control-Allow-Origin', 'https://checkout.shopify.com');
+  res.end();
 });
 
 // TODO - temp to test webhook
