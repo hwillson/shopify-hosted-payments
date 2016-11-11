@@ -6,5 +6,10 @@
       "paymentGatewayName": "Some Company - Payments",
       "paymentGatewayLogo": "https://www.somecompany.com/some_logo.png"
     }
+  },
+  "private": {
+    "subscriptions": {
+      "serviceUrl": "https://app.somesubscriptionservice.com"
+    }
   }
 }

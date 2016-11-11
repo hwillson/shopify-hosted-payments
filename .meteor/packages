@@ -22,5 +22,6 @@ practicalmeteor:mocha
 practicalmeteor:chai
 hwillson:stub-collections
 react-meteor-data
-check
+check@1.2.4
 aldeed:collection2
+http

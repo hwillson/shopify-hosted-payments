@@ -5,6 +5,7 @@ const mandatoryEnvVars = [
   'STRIPE_LIVE_PUB_KEY',
   'STRIPE_LIVE_SECRET_KEY',
   'SHOPIFY_HMAC_KEY',
+  'MP_API_KEY',
 ];
 mandatoryEnvVars.forEach((envVar) => {
   if (!process.env[envVar]) {

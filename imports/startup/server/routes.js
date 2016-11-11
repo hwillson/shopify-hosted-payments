@@ -3,9 +3,10 @@ import bodyParser from 'body-parser';
 
 import ShopifyRequest from '../../api/shopify/server/shopify_request';
 import Payments from '../../api/payments/collection';
-import StripeKeys from '../../api/environment/server/stripe_keys';
 import ShopifyResponse from '../../api/shopify/server/shopify_response';
 import Tokens from '../../api/tokens/collection';
+import CustomersCollection from '../../api/customers/collection';
+import Subscription from '../../api/subscriptions/server/subscription';
 
 const RouteHandler = {
   // Verify the incoming shopify request is valid, save the incoming payment
@@ -54,20 +55,8 @@ const RouteHandler = {
         payment.timestamp = new Date();
         const paymentId = Payments.insert(payment);
 
-        const stripe = require('stripe')(
-          (payment.x_test === 'true')
-            ? StripeKeys.testSecret
-            : StripeKeys.liveSecret
-        );
-
         try {
-          // Create the Stripe charge
-          const charge = stripe.charges.create({
-            amount: payment.x_amount * 100,
-            currency: 'usd',
-            source: tokenData.token,
-            description: `Charge for ${payment.x_description}`,
-          });
+          const charge = CustomersCollection.findAndChargeCustomer(payment);
 
           // Updated saved payment details with successful Stripe charge
           // reference information
@@ -102,6 +91,22 @@ const RouteHandler = {
 
     res.end();
   },
+
+  // When the Shopify "Order Payment" event is fired, this webhook can be called
+  // to send order data into a 3rd party subscription system.
+  orderPayment(params, req, res) {
+    const orderData = req.body;
+    if (orderData) {
+      const lineItems = orderData.line_items;
+      lineItems.forEach((lineItem) => {
+        if (lineItem.sku.indexOf('TF_SUB') > -1) {
+          // Subscription order found; create new subscription in MP
+          Subscription.create(orderData);
+        }
+      });
+    }
+    res.end();
+  },
 };
 
 Picker.middleware(bodyParser.json());
@@ -120,16 +125,16 @@ Picker.route(
 Picker.route('/incoming-token', (params, req, res) => {
   const tokenData = req.body;
   if (tokenData) {
+    Tokens.remove({ checkoutUrl: tokenData.checkoutUrl });
     Tokens.insert(tokenData);
   }
   res.setHeader('Access-Control-Allow-Origin', 'https://checkout.shopify.com');
   res.end();
 });
 
-// TODO - temp to test webhook
-// see if I can read in custom line items added to order to represent subscription
-// Picker.route('/order-payment', (params, req, res) => {
-//   console.log(req.body);
-// });
+Picker.route(
+  '/order-payment',
+  (params, req, res) => RouteHandler.orderPayment(params, req, res)
+);
 
 export default RouteHandler;
