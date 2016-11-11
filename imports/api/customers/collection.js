@@ -45,7 +45,7 @@ CustomersCollection.findAndChargeCustomer = (payment) => {
     const stripeChargesCreateSync =
       Meteor.wrapAsync(stripe.charges.create, stripe.charges);
     charge = stripeChargesCreateSync({
-      amount: payment.x_amount * 100,
+      amount: parseInt(payment.x_amount * 100, 10),
       currency: 'usd',
       customer: stripeCustomerId,
       description: `Charge for ${payment.x_description}`,
