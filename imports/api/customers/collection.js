@@ -25,7 +25,7 @@ CustomersCollection.findAndChargeCustomer = (payment) => {
       let stripeCustomer;
       try {
         stripeCustomer = stripeCustomersCreateSync({
-          card: payment.token,
+          card: payment.stripe_token,
           email: payment.x_customer_email,
         });
       } catch (error) {
