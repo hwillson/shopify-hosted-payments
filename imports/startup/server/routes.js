@@ -4,7 +4,6 @@ import bodyParser from 'body-parser';
 import ShopifyRequest from '../../api/shopify/server/shopify_request';
 import Payments from '../../api/payments/collection';
 import ShopifyResponse from '../../api/shopify/server/shopify_response';
-import Tokens from '../../api/tokens/collection';
 import CustomersCollection from '../../api/customers/collection';
 import Subscription from '../../api/subscriptions/server/subscription';
 
@@ -44,14 +43,8 @@ const RouteHandler = {
     const payment = shopifyRequest.request;
 
     if (shopifyRequest.isSignatureValid()) {
-      // Load saved Stripe token
-      const checkoutUrl =
-        payment.x_url_complete.replace('/offsite_gateway_callback', '');
-      const tokenData = Tokens.findOne({ checkoutUrl });
-
-      if (tokenData) {
+      if (payment.stripe_token) {
         // Save incoming Shopify request payment details for reference
-        payment.token = tokenData.token;
         payment.timestamp = new Date();
         const paymentId = Payments.insert(payment);
 
@@ -121,16 +114,6 @@ Picker.route(
   '/incoming-payment-with-token',
   (params, req, res) => RouteHandler.incomingPaymentWithToken(params, req, res)
 );
-
-Picker.route('/incoming-token', (params, req, res) => {
-  const tokenData = req.body;
-  if (tokenData) {
-    Tokens.remove({ checkoutUrl: tokenData.checkoutUrl });
-    Tokens.insert(tokenData);
-  }
-  res.setHeader('Access-Control-Allow-Origin', 'https://checkout.shopify.com');
-  res.end();
-});
 
 Picker.route(
   '/order-payment',
