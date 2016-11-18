@@ -6,6 +6,7 @@ import Payments from '../../api/payments/collection';
 import ShopifyResponse from '../../api/shopify/server/shopify_response';
 import CustomersCollection from '../../api/customers/collection';
 import Subscription from '../../api/subscriptions/server/subscription';
+import Stripe from '../../api/cards/server/stripe';
 
 const RouteHandler = {
   // Verify the incoming shopify request is valid, save the incoming payment
@@ -100,6 +101,44 @@ const RouteHandler = {
     }
     res.end();
   },
+
+  updateCard(params, req, res) {
+    const cardDetails = req.body;
+    let statusCode = 400;
+    const updateResponse = {};
+    if (cardDetails) {
+      try {
+        Stripe.updateCard({
+          customerId: cardDetails.customerId,
+          tokenId: cardDetails.tokenId,
+          testMode: true,
+        });
+        statusCode = 200;
+        updateResponse.success = true;
+        updateResponse.message = 'Card updated';
+      } catch (error) {
+        updateResponse.success = false;
+        updateResponse.message = 'Unable to update card';
+        updateResponse.details = error;
+      }
+    } else {
+      updateResponse.success = false;
+      updateResponse.message = 'Missing card details.';
+    }
+
+    const response = res;
+    response.setHeader('Content-Type', 'application/json');
+    const allowedOrigins = [
+      'https://thefeed.myshopify.com',
+      'https://the-feed.myshopify.com',
+      'https://thefeed.com',
+    ];
+    allowedOrigins.forEach((origin) => {
+      response.setHeader('Access-Control-Allow-Origin', origin);
+    });
+    response.statusCode = statusCode;
+    response.end(JSON.stringify(updateResponse));
+  },
 };
 
 Picker.middleware(bodyParser.json());
@@ -118,6 +157,11 @@ Picker.route(
 Picker.route(
   '/order-payment',
   (params, req, res) => RouteHandler.orderPayment(params, req, res)
+);
+
+Picker.route(
+  '/update-card',
+  (params, req, res) => RouteHandler.updateCard(params, req, res)
 );
 
 export default RouteHandler;
