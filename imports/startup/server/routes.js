@@ -130,9 +130,10 @@ const RouteHandler = {
     const response = res;
     response.setHeader('Content-Type', 'application/json');
     const allowedOrigins = Meteor.settings.private.cors.allowedOrigins;
-    allowedOrigins.forEach((origin) => {
+    const origin = req.headers.origin;
+    if (allowedOrigins.indexOf(origin) > -1) {
       response.setHeader('Access-Control-Allow-Origin', origin);
-    });
+    }
     response.statusCode = statusCode;
     response.end(JSON.stringify(updateResponse));
   },
