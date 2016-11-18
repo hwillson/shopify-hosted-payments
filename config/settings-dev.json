@@ -10,6 +10,11 @@
   "private": {
     "subscriptions": {
       "serviceUrl": "https://app.somesubscriptionservice.com"
+    },
+    "cors": {
+      "allowedOrigins": [
+        "https://somehost.com"
+      ]
     }
   }
 }

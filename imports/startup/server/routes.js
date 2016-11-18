@@ -1,3 +1,4 @@
+import { Meteor } from 'meteor/meteor';
 import { Picker } from 'meteor/meteorhacks:picker';
 import bodyParser from 'body-parser';
 
@@ -128,11 +129,7 @@ const RouteHandler = {
 
     const response = res;
     response.setHeader('Content-Type', 'application/json');
-    const allowedOrigins = [
-      'https://thefeed.myshopify.com',
-      'https://the-feed.myshopify.com',
-      'https://thefeed.com',
-    ];
+    const allowedOrigins = Meteor.settings.private.cors.allowedOrigins;
     allowedOrigins.forEach((origin) => {
       response.setHeader('Access-Control-Allow-Origin', origin);
     });
