@@ -20,11 +20,7 @@ const makePayment = new ValidatedMethod({
     let queryString;
     if (!this.isSimulation) {
       import StripeKeys from '../environment/server/stripe_keys';
-      const stripe = require('stripe')(
-        (payment.x_test === 'true')
-          ? StripeKeys.testSecret
-          : StripeKeys.liveSecret
-      );
+      const stripe = require('stripe')(StripeKeys.secret);
       const stripeChargesCreateSync =
         Meteor.wrapAsync(stripe.charges.create, stripe.charges);
       try {

@@ -10,12 +10,7 @@ CustomersCollection.attachSchema(CustomerSchema);
 CustomersCollection.findAndChargeCustomer = (payment) => {
   let charge;
   if (payment) {
-    const stripe = require('stripe')(
-      (payment.x_test === 'true')
-        ? StripeKeys.testSecret
-        : StripeKeys.liveSecret
-    );
-
+    const stripe = require('stripe')(StripeKeys.secret);
     let stripeCustomerId;
     const customer =
       CustomersCollection.findOne({ email: payment.x_customer_email });

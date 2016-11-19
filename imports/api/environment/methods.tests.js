@@ -9,30 +9,15 @@ import getStripePubKey from './methods';
 
 describe('api.environment.methods', function () {
   describe('#getStripePubKey', function () {
-    it('should return test publishable key', function (done) {
-      getStripePubKey.call({ testMode: true }, (error, key) => {
+    it('should return publishable key', function (done) {
+      getStripePubKey.call((error, key) => {
         if (error) {
           done(error);
         } else {
           expect(key).to.not.be.empty;
           if (Meteor.isServer) {
             import StripeKeys from './server/stripe_keys';
-            expect(key).to.equal(StripeKeys.testPublic);
-          }
-          done();
-        }
-      });
-    });
-
-    it('should return live publishable key', function (done) {
-      getStripePubKey.call({ testMode: false }, (error, key) => {
-        if (error) {
-          done(error);
-        } else {
-          expect(key).to.not.be.empty;
-          if (Meteor.isServer) {
-            import StripeKeys from './server/stripe_keys';
-            expect(key).to.equal(StripeKeys.livePublic);
+            expect(key).to.equal(StripeKeys.public);
           }
           done();
         }

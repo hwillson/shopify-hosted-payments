@@ -2,7 +2,6 @@
 /* eslint-disable func-names, prefer-arrow-callback, no-unused-expressions */
 
 import { expect } from 'meteor/practicalmeteor:chai';
-import { _ } from 'meteor/underscore';
 import StubCollections from 'meteor/hwillson:stub-collections';
 
 import RouteHandler from './routes';
