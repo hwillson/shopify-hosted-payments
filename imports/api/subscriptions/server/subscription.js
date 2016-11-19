@@ -29,7 +29,7 @@ const Subscription = {
             productId: lineItem.product_id,
             variationId: lineItem.variant_id,
             quantity: lineItem.quantity,
-            discountPercent: 10,
+            // discountPercent: 10,
           });
         }
       });

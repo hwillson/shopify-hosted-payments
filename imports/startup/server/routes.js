@@ -128,14 +128,49 @@ const RouteHandler = {
     }
 
     const response = res;
+    this._setHeaders(req, response);
+    response.statusCode = statusCode;
+    response.end(JSON.stringify(updateResponse));
+  },
+
+  // chargeCard(params, req, res) {
+  //   const chargeDetails = req.body;
+  //   let statusCode = 400;
+  //   const chargeResponse = {};
+  //   if (chargeDetails) {
+  //     try {
+  //       Stripe.chargeCard({
+  //         amount: chargeDetails.amount,
+  //         currency: 'usd',
+  //         customer: chargeDetails.stripeCustomerId,
+  //         description: 'Charge for thefeed.com subscription renewal',
+  //       });
+  //       statusCode = 200;
+  //       chargeResponse.success = true;
+  //       chargeResponse.message = 'Card charged.';
+  //     } catch (error) {
+  //       chargeResponse.success = false;
+  //       chargeResponse.message = 'Unable to charge card.';
+  //       chargeResponse.details = error;
+  //     }
+  //   } else {
+  //     chargeResponse.success = false;
+  //     chargeResponse.message = 'Missing charge details.';
+  //   }
+  //
+  //   const response = res;
+  //   this._setHeaders(req, response);
+  //   response.statusCode = statusCode;
+  //   response.end(JSON.stringify(chargeResponse));
+  // },
+
+  _setHeader(request, response) {
     response.setHeader('Content-Type', 'application/json');
     const allowedOrigins = Meteor.settings.private.cors.allowedOrigins;
-    const origin = req.headers.origin;
+    const origin = request.headers.origin;
     if (allowedOrigins.indexOf(origin) > -1) {
       response.setHeader('Access-Control-Allow-Origin', origin);
     }
-    response.statusCode = statusCode;
-    response.end(JSON.stringify(updateResponse));
   },
 };
 
@@ -161,5 +196,10 @@ Picker.route(
   '/update-card',
   (params, req, res) => RouteHandler.updateCard(params, req, res)
 );
+
+// Picker.route(
+//   '/charge-card',
+//   (params, req, res) => RouteHandler.chargeCard(params, req, res)
+// );
 
 export default RouteHandler;
