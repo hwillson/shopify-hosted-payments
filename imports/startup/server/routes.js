@@ -92,13 +92,17 @@ const RouteHandler = {
   orderPayment(params, req, res) {
     const orderData = req.body;
     if (orderData) {
+      let subscriptionProductFound = false;
       const lineItems = orderData.line_items;
       lineItems.forEach((lineItem) => {
         if (lineItem.sku.indexOf('TF_SUB') > -1) {
-          // Subscription order found; create new subscription in MP
-          Subscription.create(orderData);
+          subscriptionProductFound = true;
         }
       });
+      if (subscriptionProductFound) {
+        // Subscription order found; create new subscription in MP
+        Subscription.create(orderData);
+      }
     }
     res.end();
   },
@@ -161,7 +165,7 @@ const RouteHandler = {
     response.end(JSON.stringify(chargeResponse));
   },
 
-  _setHeader(request, response) {
+  _setHeaders(request, response) {
     response.setHeader('Content-Type', 'application/json');
     const allowedOrigins = Meteor.settings.private.cors.allowedOrigins;
     const origin = request.headers.origin;
