@@ -10,8 +10,11 @@ const Subscription = {
       const subServiceUrl =
         `${Meteor.settings.private.subscriptions.serviceUrl}`
         + '/methods/api_CreateNewSubscription';
-      HTTP.post(subServiceUrl, { data: subscriptionData });
-      // TODO - add some error handling / retrying ...
+      HTTP.post(subServiceUrl, { data: subscriptionData }, (error) => {
+        if (error) {
+          throw error;
+        }
+      });
     }
   },
 

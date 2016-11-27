@@ -44,44 +44,28 @@ const RouteHandler = {
     shopifyRequest.init(req.body);
     const payment = shopifyRequest.request;
 
+    let shopifyResponse;
     if (shopifyRequest.isSignatureValid()) {
       if (payment.stripe_token) {
-        // Save incoming Shopify request payment details for reference
         payment.timestamp = new Date();
-        const paymentId = Payments.insert(payment);
-
-        try {
-          const charge = CustomersCollection.findAndChargeCustomer(payment);
-
-          // Updated saved payment details with successful Stripe charge
-          // reference information
-          Payments.update(
-            { _id: paymentId },
-            { $set: { status: 'completed', charge, error: null } }
-          );
-
+        if (this._chargeCustomer(payment)) {
           // Prepare response data and post back to Shopify
-          const shopifyResponse = Object.create(ShopifyResponse);
+          shopifyResponse = Object.create(ShopifyResponse);
           shopifyResponse.init(payment);
-          res.writeHead(302, {
-            Location: `${payment.x_url_complete}?${shopifyResponse.queryString()}`,
-          });
-        } catch (error) {
-          // Unable to create Stripe charge so save error details with payment
-          // information and redirect back to the Shopify request cancel URL
-          Payments.update(
-            { _id: paymentId },
-            { $set: { status: 'failed', error, charge: null } }
-          );
-          res.writeHead(302, { Location: payment.x_url_cancel });
         }
-      } else {
-        // Missing token; redirect to shopify cancel URL
-        res.writeHead(302, { Location: payment.x_url_cancel });
       }
+    }
+
+    if (shopifyResponse) {
+      res.writeHead(302, {
+        Location: `${payment.x_url_complete}?${shopifyResponse.queryString()}`,
+      });
     } else {
-      // Invalid signature; redirect to shopify cancel URL
-      res.writeHead(302, { Location: payment.x_url_cancel });
+      const failedUrl = payment.x_url_complete.replace(
+        '/offsite_gateway_callback',
+        '?step=payment_method&failed=1',
+      );
+      res.writeHead(302, { Location: failedUrl });
     }
 
     res.end();
@@ -173,6 +157,71 @@ const RouteHandler = {
       response.setHeader('Access-Control-Allow-Origin', origin);
     }
   },
+
+  _chargeCustomer(payment) {
+    let success = false;
+    if (payment) {
+      let paymentId;
+      try {
+        // Save incoming Shopify request payment details for reference
+        paymentId = Payments.insert(payment);
+
+        const charge = CustomersCollection.findAndChargeCustomer(payment);
+
+        // Updated saved payment details with successful Stripe charge
+        // reference information
+        Payments.update(
+          { _id: paymentId },
+          { $set: { status: 'completed', charge, error: null } }
+        );
+        success = true;
+      } catch (error) {
+        // Unable to create Stripe charge so save error details with payment
+        // information
+        if (paymentId) {
+          Payments.update(
+            { _id: paymentId },
+            { $set: { status: 'failed', error, charge: null } }
+          );
+        }
+      }
+    }
+    return success;
+  },
+
+  // async _chargeCustomer(payment) {
+  //   return await new Promise((resolve, reject) => {
+  //     if (payment) {
+  //       let paymentId;
+  //       try {
+  //         // Save incoming Shopify request payment details for reference
+  //         paymentId = Payments.insert(payment);
+  //
+  //         const charge = CustomersCollection.findAndChargeCustomer(payment);
+  //
+  //         // Updated saved payment details with successful Stripe charge
+  //         // reference information
+  //         Payments.update(
+  //           { _id: paymentId },
+  //           { $set: { status: 'completed', charge, error: null } }
+  //         );
+  //         resolve();
+  //       } catch (error) {
+  //         // Unable to create Stripe charge so save error details with payment
+  //         // information
+  //         if (paymentId) {
+  //           Payments.update(
+  //             { _id: paymentId },
+  //             { $set: { status: 'failed', error, charge: null } }
+  //           );
+  //         }
+  //         reject(error);
+  //       }
+  //     } else {
+  //       reject();
+  //     }
+  //   });
+  // },
 };
 
 Picker.middleware(bodyParser.json());
