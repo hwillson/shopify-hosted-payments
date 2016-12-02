@@ -43,12 +43,15 @@ const RouteHandler = {
     const shopifyRequest = Object.create(ShopifyRequest);
     shopifyRequest.init(req.body);
     const payment = shopifyRequest.request;
+    payment.timestamp = new Date();
+
+    // Login incoming Shopify request payment details for reference
+    const paymentId = Payments.insert(payment);
 
     let shopifyResponse;
     if (shopifyRequest.isSignatureValid()) {
       if (payment.stripe_token) {
-        payment.timestamp = new Date();
-        if (this._chargeCustomer(payment)) {
+        if (this._chargeCustomer(paymentId, payment)) {
           // Prepare response data and post back to Shopify
           shopifyResponse = Object.create(ShopifyResponse);
           shopifyResponse.init(payment);
@@ -158,14 +161,12 @@ const RouteHandler = {
     }
   },
 
-  _chargeCustomer(payment) {
+  _chargeCustomer(paymentId, payment) {
     let success = false;
-    if (payment) {
-      let paymentId;
+    if (paymentId && payment) {
       try {
-        // Save incoming Shopify request payment details for reference
-        paymentId = Payments.insert(payment);
-
+        // Find a matching customer if they exist and charge them; otherwise
+        // save customer details and charge them.
         const charge = CustomersCollection.findAndChargeCustomer(payment);
 
         // Updated saved payment details with successful Stripe charge
@@ -178,12 +179,10 @@ const RouteHandler = {
       } catch (error) {
         // Unable to create Stripe charge so save error details with payment
         // information
-        if (paymentId) {
-          Payments.update(
-            { _id: paymentId },
-            { $set: { status: 'failed', error, charge: null } }
-          );
-        }
+        Payments.update(
+          { _id: paymentId },
+          { $set: { status: 'failed', error, charge: null } }
+        );
       }
     }
     return success;
