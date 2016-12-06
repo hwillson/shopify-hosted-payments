@@ -3,6 +3,7 @@ import { Picker } from 'meteor/meteorhacks:picker';
 import bodyParser from 'body-parser';
 
 import ShopifyRequest from '../../api/shopify/server/shopify_request';
+import ShopifyCustomerApi from '../../api/shopify/server/shopify_customer_api';
 import Payments from '../../api/payments/collection';
 import ShopifyResponse from '../../api/shopify/server/shopify_response';
 import CustomersCollection from '../../api/customers/collection';
@@ -152,6 +153,36 @@ const RouteHandler = {
     response.end(JSON.stringify(chargeResponse));
   },
 
+  customerActivationDetails(params, req, res) {
+    let statusCode = 400;
+    const customerResponse = {
+      message: null,
+      data: null,
+    };
+    if (params && params.query && params.query.email) {
+      const customer = ShopifyCustomerApi.findCustomer(params.query.email);
+      if (customer) {
+        const activationUrl = ShopifyCustomerApi.getActivationUrl(customer.id);
+        if (activationUrl) {
+          customerResponse.message = 'Activation URL generated';
+          customer.activationUrl = activationUrl;
+          customerResponse.data = JSON.stringify(customer);
+        } else {
+          customerResponse.message = 'Account already active';
+        }
+      } else {
+        customerResponse.message = 'Unable to find a matching customer';
+      }
+      statusCode = 200;
+    } else {
+      customerResponse.message = 'Missing email';
+    }
+    const response = res;
+    this._setHeaders(req, response);
+    response.statusCode = statusCode;
+    response.end(JSON.stringify(customerResponse));
+  },
+
   _setHeaders(request, response) {
     response.setHeader('Content-Type', 'application/json');
     const allowedOrigins = Meteor.settings.private.cors.allowedOrigins;
@@ -249,6 +280,10 @@ Picker.route(
 Picker.route(
   '/charge-card',
   (params, req, res) => RouteHandler.chargeCard(params, req, res)
+);
+Picker.route(
+  '/customer-activation-details',
+  (params, req, res) => RouteHandler.customerActivationDetails(params, req, res)
 );
 
 export default RouteHandler;
