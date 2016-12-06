@@ -157,7 +157,7 @@ const RouteHandler = {
     let statusCode = 400;
     const customerResponse = {
       message: null,
-      data: null,
+      customer: null,
     };
     if (params && params.query && params.query.email) {
       const customer = ShopifyCustomerApi.findCustomer(params.query.email);
@@ -166,7 +166,7 @@ const RouteHandler = {
         if (activationUrl) {
           customerResponse.message = 'Activation URL generated';
           customer.activationUrl = activationUrl;
-          customerResponse.data = JSON.stringify(customer);
+          customerResponse.customer = customer;
         } else {
           customerResponse.message = 'Account already active';
         }
