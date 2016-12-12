@@ -8,7 +8,7 @@ import Payments from '../../api/payments/collection';
 import ShopifyResponse from '../../api/shopify/server/shopify_response';
 import CustomersCollection from '../../api/customers/collection';
 import Subscription from '../../api/subscriptions/server/subscription';
-import Stripe from '../../api/cards/server/stripe';
+import StripeHelper from '../../api/cards/server/stripe_helper';
 
 const RouteHandler = {
   // Verify the incoming shopify request is valid, save the incoming payment
@@ -35,11 +35,10 @@ const RouteHandler = {
     res.end();
   },
 
-  // With this approach it's assumed that a Stripe token has already been
-  // created and saved. Verify the incoming Shopify request, then find the
-  // matching Stripe token. Save the incoming payment details, create the
-  // necessary Stripe charge, and redirect back to Shopify. This option
-  // by-passes the Stripe checkout locally.
+  // With this approach it's assumed that a Stripe token or Stripe customer ID
+  // is being sent in. Verify the incoming Shopify request, save the incoming
+  // payment details, create the necessary Stripe charge, and redirect back
+  // to Shopify. This option by-passes the Stripe checkout locally.
   incomingPaymentWithToken(params, req, res) {
     const shopifyRequest = Object.create(ShopifyRequest);
     shopifyRequest.init(req.body);
@@ -51,12 +50,10 @@ const RouteHandler = {
 
     let shopifyResponse;
     if (shopifyRequest.isSignatureValid()) {
-      if (payment.stripe_token) {
-        if (this._chargeCustomer(paymentId, payment)) {
-          // Prepare response data and post back to Shopify
-          shopifyResponse = Object.create(ShopifyResponse);
-          shopifyResponse.init(payment);
-        }
+      if (this._chargeCustomer(paymentId, payment)) {
+        // Prepare response data and post back to Shopify
+        shopifyResponse = Object.create(ShopifyResponse);
+        shopifyResponse.init(payment);
       }
     }
 
@@ -101,13 +98,39 @@ const RouteHandler = {
     const updateResponse = {};
     if (cardDetails) {
       try {
-        Stripe.updateCard({
+        const customer = StripeHelper.updateCard({
           customerId: cardDetails.customerId,
           tokenId: cardDetails.tokenId,
         });
+
+        // Send new card details back to Shopify
+        let defaultCard = customer.sources.data.map((card) => {
+          let matchingCard;
+          if (card.id === customer.default_source) {
+            matchingCard = card;
+          }
+          return matchingCard;
+        });
+        defaultCard = defaultCard[0];
+        const responseCard = {
+          stripeCustomerId: customer.id,
+          cardType: defaultCard.brand,
+          cardExpYear: defaultCard.exp_year,
+          cardExpMonth: defaultCard.exp_month,
+          cardLast4: defaultCard.last4,
+        };
+        ShopifyCustomerApi.updateMetafield({
+          customerId: cardDetails.shopifyCustomerId,
+          namespace: 'stripe',
+          key: 'customer',
+          value: JSON.stringify(responseCard),
+          valueType: 'string',
+        });
+
         statusCode = 200;
         updateResponse.success = true;
         updateResponse.message = 'Card updated';
+        updateResponse.cardDetails = responseCard;
       } catch (error) {
         updateResponse.success = false;
         updateResponse.message = 'Unable to update card';
@@ -130,9 +153,10 @@ const RouteHandler = {
     const chargeResponse = {};
     if (chargeDetails) {
       try {
-        Stripe.chargeCard({
+        StripeHelper.chargeCard({
           customerId: chargeDetails.stripeCustomerId,
           amount: chargeDetails.amount,
+          description: chargeDetails.description,
         });
         statusCode = 200;
         chargeResponse.success = true;
@@ -196,9 +220,7 @@ const RouteHandler = {
     let success = false;
     if (paymentId && payment) {
       try {
-        // Find a matching customer if they exist and charge them; otherwise
-        // save customer details and charge them.
-        const charge = CustomersCollection.findAndChargeCustomer(payment);
+        const charge = CustomersCollection.chargeCustomer(payment);
 
         // Updated saved payment details with successful Stripe charge
         // reference information
@@ -206,6 +228,14 @@ const RouteHandler = {
           { _id: paymentId },
           { $set: { status: 'completed', charge, error: null } }
         );
+
+        if (!payment.stripe_customer_id) {
+          // Don't send stripe card details back to Shopify for charges
+          // placed with an existing Stripe customer ID (since they
+          // already have a card in Shopify)
+          ShopifyCustomerApi.updateStripeMetafield({ payment, charge });
+        }
+
         success = true;
       } catch (error) {
         // Unable to create Stripe charge so save error details with payment

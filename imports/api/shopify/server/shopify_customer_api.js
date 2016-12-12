@@ -52,6 +52,50 @@ const ShopifyCustomerApi = {
     }
     return activationUrl;
   },
+
+  updateMetafield({ customerId, namespace, key, value, valueType }) {
+    if (customerId && namespace && key && value && valueType) {
+      const serviceUrl = Meteor.settings.private.shopifyServiceUrl;
+      const apiKey = process.env.SHOPIFY_API_KEY;
+      const apiPass = process.env.SHOPIFY_API_PASS;
+      HTTP.call(
+        'POST',
+        `${serviceUrl}/customers/${customerId}/metafields.json`,
+        {
+          auth: `${apiKey}:${apiPass}`,
+          data: {
+            metafield: {
+              key,
+              value,
+              value_type: valueType,
+              namespace,
+            },
+          },
+        }
+      );
+    }
+  },
+
+  updateStripeMetafield({ payment, charge }) {
+    if (payment && charge) {
+      const customer = this.findCustomer(payment.x_customer_email);
+      if (customer) {
+        this.updateMetafield({
+          customerId: customer.id,
+          namespace: 'stripe',
+          key: 'customer',
+          value: JSON.stringify({
+            stripeCustomerId: charge.customer,
+            cardType: charge.source.brand,
+            cardExpYear: charge.source.exp_year,
+            cardExpMonth: charge.source.exp_month,
+            cardLast4: charge.source.last4,
+          }),
+          valueType: 'string',
+        });
+      }
+    }
+  },
 };
 
 export default ShopifyCustomerApi;

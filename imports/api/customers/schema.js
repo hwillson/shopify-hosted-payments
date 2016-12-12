@@ -13,6 +13,10 @@ const CustomerSchema = new SimpleSchema({
   stripeCustomerId: {
     type: String,
   },
+  shopifyCustomerId: {
+    type: Number,
+    optional: true,
+  },
 });
 
 export default CustomerSchema;

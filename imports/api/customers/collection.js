@@ -1,31 +1,27 @@
-import { Meteor } from 'meteor/meteor';
 import { Mongo } from 'meteor/mongo';
 
 import CustomerSchema from './schema';
-import StripeKeys from '../environment/server/stripe_keys';
+import StripeHelper from '../cards/server/stripe_helper';
 
 const CustomersCollection = new Mongo.Collection('customers');
 CustomersCollection.attachSchema(CustomerSchema);
 
-CustomersCollection.findAndChargeCustomer = (payment) => {
+CustomersCollection.chargeCustomer = (payment) => {
   let charge;
   if (payment) {
-    const stripe = require('stripe')(StripeKeys.secret);
     let stripeCustomerId;
-    const customer =
-      CustomersCollection.findOne({ email: payment.x_customer_email });
-    if (!customer) {
-      const stripeCustomersCreateSync =
-        Meteor.wrapAsync(stripe.customers.create, stripe.customers);
-      let stripeCustomer;
-      try {
-        stripeCustomer = stripeCustomersCreateSync({
-          card: payment.stripe_token,
-          email: payment.x_customer_email,
-        });
-      } catch (error) {
-        throw error;
-      }
+
+    if (payment.stripe_customer_id) {
+      // If a stripe customer ID is supplied with the payment request,
+      // charge that customer.
+      stripeCustomerId = payment.stripe_customer_id;
+    } else {
+      // First create the customer in stripe assigning them the referenced
+      // credit card, the save their details in the local customers collection.
+      const stripeCustomer = StripeHelper.createCustomer({
+        email: payment.x_customer_email,
+        tokenId: payment.stripe_token,
+      });
       stripeCustomerId = stripeCustomer.id;
       CustomersCollection.insert({
         firstName: payment.x_customer_first_name,
@@ -33,16 +29,11 @@ CustomersCollection.findAndChargeCustomer = (payment) => {
         email: payment.x_customer_email,
         stripeCustomerId,
       });
-    } else {
-      stripeCustomerId = customer.stripeCustomerId;
     }
 
-    const stripeChargesCreateSync =
-      Meteor.wrapAsync(stripe.charges.create, stripe.charges);
-    charge = stripeChargesCreateSync({
-      amount: parseInt(payment.x_amount * 100, 10),
-      currency: 'usd',
-      customer: stripeCustomerId,
+    charge = StripeHelper.chargeCard({
+      customerId: stripeCustomerId,
+      amount: payment.x_amount * 100,
       description: `Charge for ${payment.x_description}`,
     });
   }
