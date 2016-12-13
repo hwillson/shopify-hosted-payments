@@ -207,6 +207,14 @@ const RouteHandler = {
     response.end(JSON.stringify(customerResponse));
   },
 
+  orderCancelled(params, req, res) {
+    const order = req.body;
+    if (order && order.checkout_id) {
+      Payments.refund(order.checkout_id);
+    }
+    res.end();
+  },
+
   _setHeaders(request, response) {
     response.setHeader('Content-Type', 'application/json');
     const allowedOrigins = Meteor.settings.private.cors.allowedOrigins;
@@ -311,9 +319,15 @@ Picker.route(
   '/charge-card',
   (params, req, res) => RouteHandler.chargeCard(params, req, res)
 );
+
 Picker.route(
   '/customer-activation-details',
   (params, req, res) => RouteHandler.customerActivationDetails(params, req, res)
+);
+
+Picker.route(
+  '/order-cancelled',
+  (params, req, res) => RouteHandler.orderCancelled(params, req, res)
 );
 
 export default RouteHandler;

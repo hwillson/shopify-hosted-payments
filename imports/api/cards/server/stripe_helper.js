@@ -45,6 +45,17 @@ const StripeHelper = {
     }
     return stripeCustomer;
   },
+
+  refundCharge(chargeId) {
+    if (chargeId) {
+      const stripe = require('stripe')(StripeKeys.secret);
+      const stripeRefundsCreateSync =
+        Meteor.wrapAsync(stripe.refunds.create, stripe.refunds);
+      stripeRefundsCreateSync({
+        charge: chargeId,
+      });
+    }
+  },
 };
 
 export default StripeHelper;
