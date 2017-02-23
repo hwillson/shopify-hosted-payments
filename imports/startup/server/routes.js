@@ -1,5 +1,6 @@
 import { Meteor } from 'meteor/meteor';
 import { Picker } from 'meteor/meteorhacks:picker';
+import { HTTP } from 'meteor/http';
 import bodyParser from 'body-parser';
 
 import ShopifyRequest from '../../api/shopify/server/shopify_request';
@@ -9,6 +10,7 @@ import ShopifyResponse from '../../api/shopify/server/shopify_response';
 import CustomersCollection from '../../api/customers/collection';
 import Subscription from '../../api/subscriptions/server/subscription';
 import StripeHelper from '../../api/cards/server/stripe_helper';
+import loyaltyLion from '../../api/loyaltylion/server/loyaltylion';
 
 const RouteHandler = {
   // Verify the incoming shopify request is valid, save the incoming payment
@@ -215,6 +217,43 @@ const RouteHandler = {
     res.end();
   },
 
+  subscriptionEvent(params, req, res) {
+    const reqData = req.body;
+    if (reqData && reqData.data) {
+      const eventData = JSON.parse(reqData.data);
+      switch (eventData.event) {
+        case 'New Subscription': {
+          loyaltyLion.changeToSubscriptionTier(
+            eventData.extra.externalCustomerId
+          );
+          break;
+        }
+        case 'Cancelled Subscription': {
+          loyaltyLion.changeToGoldTier(eventData.extra.externalCustomerId);
+          break;
+        }
+        case 'Paused Subscription': {
+          loyaltyLion.changeToGoldTier(eventData.extra.externalCustomerId);
+          break;
+        }
+        case 'Resumed Subscription': {
+          loyaltyLion.changeToSubscriptionTier(
+            eventData.extra.externalCustomerId
+          );
+          break;
+        }
+        case 'Failed Payment': {
+          loyaltyLion.changeToGoldTier(eventData.extra.externalCustomerId);
+          break;
+        }
+        default: {
+          // Do nothing
+        }
+      }
+    }
+    res.end();
+  },
+
   _setHeaders(request, response) {
     response.setHeader('Content-Type', 'application/json');
     const allowedOrigins = Meteor.settings.private.cors.allowedOrigins;
@@ -328,6 +367,11 @@ Picker.route(
 Picker.route(
   '/order-cancelled',
   (params, req, res) => RouteHandler.orderCancelled(params, req, res)
+);
+
+Picker.route(
+  '/subscription-event',
+  (params, req, res) => RouteHandler.subscriptionEvent(params, req, res),
 );
 
 export default RouteHandler;
