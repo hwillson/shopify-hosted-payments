@@ -1,6 +1,5 @@
 import { Meteor } from 'meteor/meteor';
 import { Picker } from 'meteor/meteorhacks:picker';
-import { HTTP } from 'meteor/http';
 import bodyParser from 'body-parser';
 
 import ShopifyRequest from '../../api/shopify/server/shopify_request';
@@ -11,6 +10,7 @@ import CustomersCollection from '../../api/customers/collection';
 import Subscription from '../../api/subscriptions/server/subscription';
 import StripeHelper from '../../api/cards/server/stripe_helper';
 import loyaltyLion from '../../api/loyaltylion/server/loyaltylion';
+import klaviyo from '../../api/klaviyo/server/klaviyo';
 
 const RouteHandler = {
   // Verify the incoming shopify request is valid, save the incoming payment
@@ -226,24 +226,29 @@ const RouteHandler = {
           loyaltyLion.changeToSubscriptionTier(
             eventData.extra.externalCustomerId
           );
+          klaviyo.trackEvent(eventData);
           break;
         }
         case 'Cancelled Subscription': {
           loyaltyLion.changeToGoldTier(eventData.extra.externalCustomerId);
+          klaviyo.trackEvent(eventData);
           break;
         }
         case 'Paused Subscription': {
           loyaltyLion.changeToGoldTier(eventData.extra.externalCustomerId);
+          klaviyo.trackEvent(eventData);
           break;
         }
         case 'Resumed Subscription': {
           loyaltyLion.changeToSubscriptionTier(
             eventData.extra.externalCustomerId
           );
+          klaviyo.trackEvent(eventData);
           break;
         }
-        case 'Failed Payment': {
+        case 'Payment Failed': {
           loyaltyLion.changeToGoldTier(eventData.extra.externalCustomerId);
+          klaviyo.trackEvent(eventData);
           break;
         }
         default: {

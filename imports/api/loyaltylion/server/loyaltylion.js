@@ -8,12 +8,17 @@ const loyaltyLion = {
   updateTier({ customerId, tierId }) {
     const auth = this.getBasicAuthString();
     if (auth && customerId && tierId) {
-      HTTP.post(`${this.apiUrl}/customers/${customerId}/change_tier`, {
-        auth,
-        params: {
-          tier_id: tierId,
-        },
-      });
+      try {
+        HTTP.post(`${this.apiUrl}/customers/${customerId}/change_tier`, {
+          auth,
+          params: {
+            tier_id: tierId,
+          },
+        });
+      } catch (error) {
+        // Happens when the passed in customer can't be found in LoyaltyLion.
+        // Swallow this error for now.
+      }
     }
   },
 
