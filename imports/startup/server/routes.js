@@ -106,26 +106,11 @@ const RouteHandler = {
         });
 
         // Send new card details back to Shopify
-        let defaultCard = customer.sources.data.map((card) => {
-          let matchingCard;
-          if (card.id === customer.default_source) {
-            matchingCard = card;
-          }
-          return matchingCard;
-        });
-        defaultCard = defaultCard[0];
-        const responseCard = {
-          stripeCustomerId: customer.id,
-          cardType: defaultCard.brand,
-          cardExpYear: defaultCard.exp_year,
-          cardExpMonth: defaultCard.exp_month,
-          cardLast4: defaultCard.last4,
-        };
         ShopifyCustomerApi.updateMetafield({
           customerId: cardDetails.shopifyCustomerId,
           namespace: 'stripe',
           key: 'customer',
-          value: JSON.stringify(responseCard),
+          value: JSON.stringify(customer.primaryCard),
           valueType: 'string',
         });
 

@@ -18,6 +18,23 @@ const Subscription = {
     }
   },
 
+  resume(subscriptionId) {
+    if (subscriptionId) {
+      const subServiceUrl =
+        `${Meteor.settings.private.subscriptions.serviceUrl}`
+        + '/methods/api_UpdateSubscriptionStatus';
+      HTTP.post(
+        subServiceUrl,
+        { data: { subscriptionId, statusId: 'active' } },
+        (error) => {
+          if (error) {
+            throw error;
+          }
+        }
+      );
+    }
+  },
+
   _subscriptionFrequencyId: 'w1',
 
   _prepareProducts(orderData) {

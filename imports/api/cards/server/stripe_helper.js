@@ -12,6 +12,24 @@ const StripeHelper = {
       customer = stripeCustomersUpdateSync(customerId, {
         source: tokenId,
       });
+
+      if (customer) {
+        let defaultCard = customer.sources.data.map((card) => {
+          let matchingCard;
+          if (card.id === customer.default_source) {
+            matchingCard = card;
+          }
+          return matchingCard;
+        });
+        defaultCard = defaultCard[0];
+        customer.primaryCard = {
+          stripeCustomerId: customer.id,
+          cardType: defaultCard.brand,
+          cardExpYear: defaultCard.exp_year,
+          cardExpMonth: defaultCard.exp_month,
+          cardLast4: defaultCard.last4,
+        };
+      }
     }
     return customer;
   },

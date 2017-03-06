@@ -1,5 +1,12 @@
-/* global document, window */
+/* global document */
 
+import { render } from 'react-dom';
+
+import renderRoutes from './routes';
+
+render(renderRoutes(), document.getElementById('app'));
+
+/*
 import React from 'react';
 import { render } from 'react-dom';
 import { Meteor } from 'meteor/meteor';
@@ -17,3 +24,4 @@ if (paymentId) {
 } else {
   window.location.replace(Meteor.settings.public.paymentPage.siteUrl);
 }
+*/

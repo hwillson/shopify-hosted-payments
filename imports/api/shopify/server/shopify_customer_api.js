@@ -96,6 +96,36 @@ const ShopifyCustomerApi = {
       }
     }
   },
+
+  getCustomerMetadata(shopifyCustomerId) {
+    const customerMetadata = {};
+    if (shopifyCustomerId) {
+      const serviceUrl = Meteor.settings.private.shopifyServiceUrl;
+      const apiKey = process.env.SHOPIFY_API_KEY;
+      const apiPass = process.env.SHOPIFY_API_PASS;
+      const response = HTTP.get(
+        `${serviceUrl}/customers/${shopifyCustomerId}/metafields.json`,
+        {
+          auth: `${apiKey}:${apiPass}`,
+        }
+      );
+      if (response && response.data) {
+        const metafields = response.data.metafields;
+        if (metafields.length) {
+          metafields.forEach((metafield) => {
+            if (metafield.namespace === 'stripe'
+                && metafield.key === 'customer') {
+              customerMetadata.stripe = JSON.parse(metafield.value);
+            } else if (metafield.namespace === 'moreplease'
+                && metafield.key === 'subscription_id') {
+              customerMetadata.subscriptionId = metafield.value;
+            }
+          });
+        }
+      }
+    }
+    return customerMetadata;
+  },
 };
 
 export default ShopifyCustomerApi;
