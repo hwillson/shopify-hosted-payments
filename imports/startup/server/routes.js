@@ -47,7 +47,7 @@ const RouteHandler = {
     const payment = shopifyRequest.request;
     payment.timestamp = new Date();
 
-    // Login incoming Shopify request payment details for reference
+    // Log incoming Shopify request payment details for reference
     const paymentId = Payments.insert(payment);
 
     let shopifyResponse;
@@ -117,7 +117,7 @@ const RouteHandler = {
         statusCode = 200;
         updateResponse.success = true;
         updateResponse.message = 'Card updated';
-        updateResponse.cardDetails = responseCard;
+        updateResponse.cardDetails = customer.primaryCard;
       } catch (error) {
         updateResponse.success = false;
         updateResponse.message = 'Unable to update card';

@@ -25,7 +25,7 @@ const Subscription = {
         + '/methods/api_UpdateSubscriptionStatus';
       HTTP.post(
         subServiceUrl,
-        { data: { subscriptionId, statusId: 'active' } },
+        { data: { subscriptionId, statusId: 'active', renewTomorrow: true } },
         (error) => {
           if (error) {
             throw error;
