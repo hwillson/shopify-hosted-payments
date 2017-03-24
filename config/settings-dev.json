@@ -4,7 +4,8 @@
       "companyName": "Some Company Inc.",
       "siteUrl": "https://www.somecompany.com",
       "paymentGatewayName": "Some Company - Payments",
-      "paymentGatewayLogo": "https://www.somecompany.com/some_logo.png"
+      "paymentGatewayLogo": "https://www.somecompany.com/some_logo.png",
+      "footerLogo": "https://www.somecompany.com/some_footer_logo.png"
     },
     "updateCardPage": {
       "doneUrl": "https://www.somecompany.com/done"

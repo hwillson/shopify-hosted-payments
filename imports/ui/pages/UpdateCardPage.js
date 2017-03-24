@@ -1,17 +1,20 @@
 /* global window, StripeCheckout */
 
-import React, { Component } from 'react';
 import { Meteor } from 'meteor/meteor';
+import React, { Component } from 'react';
+import { StyleSheet, css } from 'aphrodite';
 
 import getStripePubKey from '../../api/environment/methods';
 import updateCard from '../../api/cards/methods';
+
+let styles;
 
 class UpdateCardPage extends Component {
   constructor(props) {
     super(props);
     this.openStripeCheckout = this.openStripeCheckout.bind(this);
     this.state = {
-      stripeCheckoutActive: true,
+      stripeCheckoutActive: false,
       processingUpdate: false,
     };
   }
@@ -94,8 +97,30 @@ class UpdateCardPage extends Component {
   }
 
   render() {
+    const headerLogo = Meteor.settings.public.paymentPage.paymentGatewayLogo;
+    const footerLogo = Meteor.settings.public.paymentPage.footerLogo;
     return (
-      <div />
+      <div className="update-card-page">
+        <header className={css(styles.header)}>
+          <img src={headerLogo} alt="Company logo" />
+        </header>
+        <section className={css(styles.updateCardContainer)}>
+          <a
+            href="#update-card"
+            className={css(styles.button)}
+            onClick={this.openStripeCheckout}
+          >
+            Update your credit card
+          </a>
+        </section>
+        <footer className={css(styles.footer)}>
+          <img
+            src={footerLogo}
+            alt="Company logo"
+            className={css(styles.footerLogo)}
+          />
+        </footer>
+      </div>
     );
   }
 }
@@ -103,5 +128,39 @@ class UpdateCardPage extends Component {
 UpdateCardPage.propTypes = {
   params: React.PropTypes.object.isRequired,
 };
+
+styles = StyleSheet.create({
+  header: {
+    textAlign: 'center',
+    padding: '10px 0',
+    borderBottom: '1px solid #E5E5E5',
+  },
+  updateCardContainer: {
+    textAlign: 'center',
+    paddingTop: '60px',
+  },
+  button: {
+    textTransform: 'uppercase',
+    padding: '20px',
+    fontSize: '13px',
+    borderRadius: '100px',
+    display: 'inline-block',
+    backgroundColor: '#FEBE43',
+    color: '#1c1d1d',
+    fontWeight: 'bold',
+  },
+  footer: {
+    backgroundColor: '#0a1620',
+    position: 'fixed',
+    bottom: 0,
+    height: '150px',
+    width: '100%',
+    paddingTop: '100px',
+    textAlign: 'center',
+  },
+  footerLogo: {
+    width: '200px',
+  },
+});
 
 export default UpdateCardPage;
