@@ -66,7 +66,9 @@ const Subscription = {
       customer.lastName = orderData.customer.last_name;
       const loadedCustomer =
         CustomersCollection.findOne({ email: customer.email });
-      customer.stripeCustomerId = loadedCustomer.stripeCustomerId;
+      if (loadedCustomer) {
+        customer.stripeCustomerId = loadedCustomer.stripeCustomerId;
+      }
     }
     return customer;
   },

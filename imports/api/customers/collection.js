@@ -16,13 +16,20 @@ CustomersCollection.chargeCustomer = (payment) => {
       // charge that customer.
       stripeCustomerId = payment.stripe_customer_id;
     } else {
-      // First create the customer in stripe assigning them the referenced
-      // credit card, the save their details in the local customers collection.
+      // Create the customer in stripe assigning them the referenced
+      // credit card, then save their details in the local customers collection.
+      // If matching customer already exists in Stripe, update that
+      // customers payment method.
       const stripeCustomer = StripeHelper.createCustomer({
         email: payment.x_customer_email,
         tokenId: payment.stripe_token,
       });
       stripeCustomerId = stripeCustomer.id;
+
+      // We're removing then inserting customers (instead of upserting) to fix
+      // an old bug that allowed multiple similar customer to be saved in the
+      // DB.
+      CustomersCollection.remove({ email: payment.x_customer_email });
       CustomersCollection.insert({
         firstName: payment.x_customer_first_name,
         lastName: payment.x_customer_last_name,

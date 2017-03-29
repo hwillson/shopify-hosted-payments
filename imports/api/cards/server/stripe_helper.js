@@ -1,4 +1,5 @@
 import { Meteor } from 'meteor/meteor';
+import { HTTP } from 'meteor/http';
 
 import StripeKeys from '../../environment/server/stripe_keys';
 
@@ -52,7 +53,13 @@ const StripeHelper = {
 
   createCustomer({ email, tokenId }) {
     let stripeCustomer;
-    if (email && tokenId) {
+
+    // First see if a matching customer already exists
+    const customerId = this.findCustomerId(email);
+    if (customerId) {
+      stripeCustomer = this.updateCard({ customerId, tokenId });
+    } else {
+      // Otherwise create a new customer
       const stripe = require('stripe')(StripeKeys.secret);
       const stripeCustomersCreateSync =
         Meteor.wrapAsync(stripe.customers.create, stripe.customers);
@@ -62,6 +69,26 @@ const StripeHelper = {
       });
     }
     return stripeCustomer;
+  },
+
+  findCustomerId(email) {
+    let stripeCustomerId;
+    if (email) {
+      const response = HTTP.get('https://api.stripe.com/v1/search', {
+        params: {
+          query: email,
+          type: 'customer',
+          count: 1,
+        },
+        headers: {
+          authorization: `Bearer ${StripeKeys.secret}`,
+        },
+      });
+      if (response.data && response.data.data.length > 0) {
+        stripeCustomerId = response.data.data[0].id;
+      }
+    }
+    return stripeCustomerId;
   },
 
   refundCharge(chargeId) {

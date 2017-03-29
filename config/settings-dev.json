@@ -19,6 +19,9 @@
       "allowedOrigins": [
         "https://somehost.com"
       ]
+    },
+    "bugsnag": {
+      "key": "abc123"
     }
   }
 }

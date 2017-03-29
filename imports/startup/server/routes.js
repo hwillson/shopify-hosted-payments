@@ -11,6 +11,8 @@ import Subscription from '../../api/subscriptions/server/subscription';
 import StripeHelper from '../../api/cards/server/stripe_helper';
 import loyaltyLion from '../../api/loyaltylion/server/loyaltylion';
 import klaviyo from '../../api/klaviyo/server/klaviyo';
+import tokensCollection from '../../api/tokens/collection';
+import bugsnag from '../../api/bugsnag/server/bugsnag';
 
 const RouteHandler = {
   // Verify the incoming shopify request is valid, save the incoming payment
@@ -69,6 +71,103 @@ const RouteHandler = {
         '?step=payment_method&failed=1',
       );
       res.writeHead(302, { Location: failedUrl });
+    }
+
+    res.end();
+  },
+
+  saveToken(params, req, res) {
+    let statusCode = 400;
+    const saveTokenResponse = {};
+    if (req.body && req.body.email && req.body.token) {
+      const email = req.body.email;
+      const token = req.body.token;
+      try {
+        tokensCollection.upsert({ email }, { $set: { email, token } });
+        statusCode = 200;
+        saveTokenResponse.success = true;
+        saveTokenResponse.message = 'Token saved';
+      } catch (error) {
+        saveTokenResponse.success = false;
+        saveTokenResponse.message = 'Problem saving token';
+        saveTokenResponse.error = error;
+        bugsnag.notify(error, saveTokenResponse);
+      }
+    } else {
+      saveTokenResponse.success = false;
+      saveTokenResponse.message = 'Missing email/token details';
+      bugsnag.notify(new Error(saveTokenResponse.message), saveTokenResponse);
+    }
+
+    const response = res;
+    this._setHeaders(req, response);
+    response.statusCode = statusCode;
+    response.end(JSON.stringify(saveTokenResponse));
+  },
+
+  incomingPaymentWithoutToken(params, req, res) {
+    const shopifyRequest = Object.create(ShopifyRequest);
+    shopifyRequest.init(req.body);
+    const payment = shopifyRequest.request;
+    payment.timestamp = new Date();
+
+    const failureRedirect = () => {
+      const failedUrl = payment.x_url_complete.replace(
+        '/offsite_gateway_callback',
+        '?step=payment_method&failed=1',
+      );
+      res.writeHead(302, { Location: failedUrl });
+    };
+
+    // First try to find the customers previously saved stripe token
+    const tokenData =
+      tokensCollection.findOne({ email: payment.x_customer_email });
+    if (tokenData && tokenData.token) {
+      // Token found, so we're processing a new credit card purchase
+      payment.stripe_token = tokenData.token;
+    } else {
+      // If no previously saved token, then see if a matching customer can
+      // be found with a saved stripe customer ID (this means we're processing
+      // a payment with a saved credit card).
+      const customer =
+        CustomersCollection.findOne({ email: payment.x_customer_email });
+      if (customer && customer.stripeCustomerId) {
+        payment.stripe_customer_id = customer.stripeCustomerId;
+      }
+    }
+
+    if (payment.stripe_token || payment.stripe_customer_id) {
+      // Log incoming Shopify request payment details for reference
+      const paymentId = Payments.insert(payment);
+
+      let shopifyResponse;
+      if (shopifyRequest.isSignatureValid()) {
+        if (this._chargeCustomer(paymentId, payment)) {
+          // Prepare response data and post back to Shopify
+          shopifyResponse = Object.create(ShopifyResponse);
+          shopifyResponse.init(payment);
+        }
+      }
+
+      if (shopifyResponse) {
+        res.writeHead(302, {
+          Location: `${payment.x_url_complete}?${shopifyResponse.queryString()}`,
+        });
+      } else {
+        failureRedirect();
+      }
+    } else {
+      bugsnag.notify(
+        new Error('Missing stripe token and stripe customer ID'),
+        payment
+      );
+      failureRedirect();
+    }
+
+    // Clear any previously saved stripe tokens for the payment customer,
+    // since token use is one-time
+    if (payment.stripe_token) {
+      tokensCollection.remove({ email: payment.x_customer_email });
     }
 
     res.end();
@@ -244,6 +343,41 @@ const RouteHandler = {
     res.end();
   },
 
+  updateCustomer(params, req, res) {
+    const customerDetails = req.body;
+    let statusCode = 400;
+    const updateResponse = {};
+    if (customerDetails && customerDetails.email
+        && customerDetails.stripeCustomerId) {
+      try {
+        CustomersCollection.update({
+          email: customerDetails.email,
+        }, {
+          $set: {
+            stripeCustomerId: customerDetails.stripeCustomerId,
+          },
+        });
+        statusCode = 200;
+        updateResponse.success = true;
+        updateResponse.message = 'Customer updated';
+      } catch (error) {
+        updateResponse.success = false;
+        updateResponse.message = 'Unable to update customer';
+        updateResponse.details = error;
+        bugsnag.notify(error, updateResponse);
+      }
+    } else {
+      updateResponse.success = false;
+      updateResponse.message = 'Missing customer details';
+      bugsnag.notify(new Error(updateResponse.message), updateResponse);
+    }
+
+    const response = res;
+    this._setHeaders(req, response);
+    response.statusCode = statusCode;
+    response.end(JSON.stringify(updateResponse));
+  },
+
   _setHeaders(request, response) {
     response.setHeader('Content-Type', 'application/json');
     const allowedOrigins = Meteor.settings.private.cors.allowedOrigins;
@@ -275,6 +409,7 @@ const RouteHandler = {
 
         success = true;
       } catch (error) {
+        bugsnag.notify(error, { paymentId, payment, error });
         // Unable to create Stripe charge so save error details with payment
         // information
         Payments.update(
@@ -335,6 +470,16 @@ Picker.route(
 );
 
 Picker.route(
+  '/save-token',
+  (params, req, res) => RouteHandler.saveToken(params, req, res),
+);
+
+Picker.route(
+  '/incoming-payment-without-token',
+  (params, req, res) => RouteHandler.incomingPaymentWithoutToken(params, req, res)
+);
+
+Picker.route(
   '/order-payment',
   (params, req, res) => RouteHandler.orderPayment(params, req, res)
 );
@@ -362,6 +507,11 @@ Picker.route(
 Picker.route(
   '/subscription-event',
   (params, req, res) => RouteHandler.subscriptionEvent(params, req, res),
+);
+
+Picker.route(
+  '/update-customer',
+  (params, req, res) => RouteHandler.updateCustomer(params, req, res),
 );
 
 export default RouteHandler;
