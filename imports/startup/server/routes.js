@@ -352,7 +352,7 @@ const RouteHandler = {
     if (customerDetails && customerDetails.email
         && customerDetails.stripeCustomerId) {
       try {
-        CustomersCollection.update({
+        CustomersCollection.upsert({
           email: customerDetails.email,
         }, {
           $set: {
@@ -422,40 +422,6 @@ const RouteHandler = {
     }
     return success;
   },
-
-  // async _chargeCustomer(payment) {
-  //   return await new Promise((resolve, reject) => {
-  //     if (payment) {
-  //       let paymentId;
-  //       try {
-  //         // Save incoming Shopify request payment details for reference
-  //         paymentId = Payments.insert(payment);
-  //
-  //         const charge = CustomersCollection.findAndChargeCustomer(payment);
-  //
-  //         // Updated saved payment details with successful Stripe charge
-  //         // reference information
-  //         Payments.update(
-  //           { _id: paymentId },
-  //           { $set: { status: 'completed', charge, error: null } }
-  //         );
-  //         resolve();
-  //       } catch (error) {
-  //         // Unable to create Stripe charge so save error details with payment
-  //         // information
-  //         if (paymentId) {
-  //           Payments.update(
-  //             { _id: paymentId },
-  //             { $set: { status: 'failed', error, charge: null } }
-  //           );
-  //         }
-  //         reject(error);
-  //       }
-  //     } else {
-  //       reject();
-  //     }
-  //   });
-  // },
 };
 
 Picker.middleware(bodyParser.json());

@@ -3,9 +3,11 @@ import { SimpleSchema } from 'meteor/aldeed:simple-schema';
 const CustomerSchema = new SimpleSchema({
   firstName: {
     type: String,
+    optional: true,
   },
   lastName: {
     type: String,
+    optional: true,
   },
   email: {
     type: String,
