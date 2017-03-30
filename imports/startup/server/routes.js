@@ -221,10 +221,12 @@ const RouteHandler = {
         updateResponse.success = false;
         updateResponse.message = 'Unable to update card';
         updateResponse.details = error;
+        bugsnag.notify(error, updateResponse);
       }
     } else {
       updateResponse.success = false;
       updateResponse.message = 'Missing card details.';
+      bugsnag.notify(new Error(updateResponse.message), updateResponse);
     }
 
     const response = res;
