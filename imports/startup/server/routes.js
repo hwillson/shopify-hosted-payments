@@ -154,6 +154,10 @@ const RouteHandler = {
           Location: `${payment.x_url_complete}?${shopifyResponse.queryString()}`,
         });
       } else {
+        bugsnag.notify(
+          new Error('Shopify request signature validation has failed.'),
+          payment
+        );
         failureRedirect();
       }
     } else {
