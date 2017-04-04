@@ -9,8 +9,7 @@ const klaviyo = {
         token: process.env.KLAVIYO_API_KEY,
         event: eventData.event,
         customer_properties: {
-          $email: 'prodtest@octonary.com',
-          // $email: eventData.extra.customerEmail,
+          $email: eventData.extra.customerEmail,
           subscription_id: eventData.extra.subscriptionId,
           next_shipment_date: eventData.extra.nextShipmentDate,
           total_subscription_price: eventData.extra.totalSubscriptionPrice,
