@@ -336,6 +336,10 @@ const RouteHandler = {
           klaviyo.trackEvent(eventData);
           break;
         }
+        case 'Renewed Subscription': {
+          klaviyo.trackEvent(eventData);
+          break;
+        }
         case 'Payment Failed': {
           loyaltyLion.changeToGoldTier(eventData.extra.externalCustomerId);
           klaviyo.trackEvent(eventData);
