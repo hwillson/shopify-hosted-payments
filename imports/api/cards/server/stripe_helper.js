@@ -77,7 +77,7 @@ const StripeHelper = {
       const response = HTTP.get('https://api.stripe.com/v1/search', {
         params: {
           query: email,
-          type: 'customer',
+          type: 'customers',
           count: 1,
         },
         headers: {

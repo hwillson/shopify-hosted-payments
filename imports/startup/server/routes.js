@@ -82,8 +82,12 @@ const RouteHandler = {
     if (req.body && req.body.email && req.body.token) {
       const email = req.body.email;
       const token = req.body.token;
+      const paymentMethod = req.body.paymentMethod;
       try {
-        tokensCollection.upsert({ email }, { $set: { email, token } });
+        tokensCollection.upsert(
+          { email },
+          { $set: { email, token, paymentMethod } }
+        );
         statusCode = 200;
         saveTokenResponse.success = true;
         saveTokenResponse.message = 'Token saved';
@@ -142,7 +146,7 @@ const RouteHandler = {
 
       let shopifyResponse;
       if (shopifyRequest.isSignatureValid()) {
-        if (this._chargeCustomer(paymentId, payment)) {
+        if (this._chargeCustomer(paymentId, payment, tokenData)) {
           // Prepare response data and post back to Shopify
           shopifyResponse = Object.create(ShopifyResponse);
           shopifyResponse.init(payment);
@@ -397,7 +401,7 @@ const RouteHandler = {
     }
   },
 
-  _chargeCustomer(paymentId, payment) {
+  _chargeCustomer(paymentId, payment, tokenData) {
     let success = false;
     if (paymentId && payment) {
       try {
@@ -410,10 +414,15 @@ const RouteHandler = {
           { $set: { status: 'completed', charge, error: null } }
         );
 
-        if (!payment.stripe_customer_id) {
-          // Don't send stripe card details back to Shopify for charges
+        const usingApplePay =
+          (tokenData && tokenData.paymentMethod === 'apple-pay');
+        if (!payment.stripe_customer_id && !usingApplePay) {
+          // - Don't send stripe card details back to Shopify for charges
           // placed with an existing Stripe customer ID (since they
           // already have a card in Shopify)
+          // - Don't send stripe details back for Apple Pay purchases, since
+          // Apple Pay card details can be retrieved using Apple Pay again
+          // at checkout
           ShopifyCustomerApi.updateStripeMetafield({ payment, charge });
         }
 

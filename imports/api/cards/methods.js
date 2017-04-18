@@ -14,11 +14,6 @@ const updateCard = new ValidatedMethod({
       import ShopifyCustomerApi from '../shopify/server/shopify_customer_api';
       const shopifyCustomer = ShopifyCustomerApi.findCustomer(email);
 
-
-      throw new Meteor.Error(
-        `Can't find matching Shopify customer record with email ${email}`
-      );
-
       if (!shopifyCustomer) {
         throw new Meteor.Error(
           `Can't find matching Shopify customer record with email ${email}`

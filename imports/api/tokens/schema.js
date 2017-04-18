@@ -7,6 +7,10 @@ const tokenSchema = new SimpleSchema({
   token: {
     type: String,
   },
+  paymentMethod: {
+    type: String,
+    optional: true,
+  },
 });
 
 export default tokenSchema;
