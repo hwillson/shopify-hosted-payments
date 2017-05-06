@@ -151,6 +151,11 @@ const RouteHandler = {
           shopifyResponse = Object.create(ShopifyResponse);
           shopifyResponse.init(payment);
         }
+      } else {
+        bugsnag.notify(
+          new Error('Shopify request signature validation has failed.'),
+          payment
+        );
       }
 
       if (shopifyResponse) {
@@ -158,10 +163,6 @@ const RouteHandler = {
           Location: `${payment.x_url_complete}?${shopifyResponse.queryString()}`,
         });
       } else {
-        bugsnag.notify(
-          new Error('Shopify request signature validation has failed.'),
-          payment
-        );
         failureRedirect();
       }
     } else {
@@ -405,6 +406,15 @@ const RouteHandler = {
     let success = false;
     if (paymentId && payment) {
       try {
+        // Make sure charges for the incoming order haven't already been
+        // successful.
+        if (Payments.find({
+          x_reference: payment.x_reference,
+          status: 'completed',
+        }).count()) {
+          throw new Error('Duplicate charge attempted; new charge ignored.');
+        }
+
         const charge = CustomersCollection.chargeCustomer(payment);
 
         // Updated saved payment details with successful Stripe charge
