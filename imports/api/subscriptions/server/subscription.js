@@ -38,23 +38,40 @@ const Subscription = {
   _subscriptionFrequencyId: 'w1',
 
   _prepareProducts(orderData) {
-    const products = [];
+    const productData = {
+      products: [],
+      includesFreeTrial: false,
+    };
     if (orderData && orderData.line_items) {
       orderData.line_items.forEach((lineItem) => {
         if (lineItem.sku.indexOf('TF_SUB_') > -1) {
           this._subscriptionFrequencyId =
             lineItem.sku.replace('TF_SUB_', '').toLowerCase();
+        } else if (lineItem.sku.indexOf('TF_TRIAL_') > -1) {
+          // Note format:
+          // TF_ONGOING_TRIAL: TF_SPORT_SIZE (PRODUCT_ID-VARIATION_ID)
+          const note = orderData.note;
+          const matches = /^TF_ONGOING_TRIAL.*?\((.*?)-(.*?)\)/.exec(note);
+          if (matches && (matches.length === 3)) {
+            const productId = matches[1];
+            const variationId = matches[2];
+            productData.products.push({
+              productId,
+              variationId,
+              quantity: 1,
+            });
+            productData.includesFreeTrial = true;
+          }
         } else {
-          products.push({
+          productData.products.push({
             productId: lineItem.product_id,
             variationId: lineItem.variant_id,
             quantity: lineItem.quantity,
-            // discountPercent: 10,
           });
         }
       });
     }
-    return products;
+    return productData;
   },
 
   _prepareCustomer(orderData) {
@@ -97,7 +114,7 @@ const Subscription = {
   },
 
   _prepareSubscription(orderData) {
-    const products = this._prepareProducts(orderData);
+    const productData = this._prepareProducts(orderData);
     const customer = this._prepareCustomer(orderData);
     const shippingMethod = this._prepareShippingMethod(orderData);
     const order = this._prepareOrder(orderData);
@@ -105,6 +122,7 @@ const Subscription = {
     const subscriptionData = {
       apiKey: process.env.MP_API_KEY,
       sendSubscriptionIdToStore: true,
+      includesFreeTrial: productData.includesFreeTrial,
       subscription: {
         renewalFrequencyId: this._subscriptionFrequencyId,
         shippingMethodId: shippingMethod.shippingMethodId,
@@ -113,7 +131,7 @@ const Subscription = {
       },
       customer,
       order,
-      subscriptionItems: products,
+      subscriptionItems: productData.products,
     };
 
     return subscriptionData;
