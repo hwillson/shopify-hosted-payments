@@ -1,7 +1,8 @@
 import { Meteor } from 'meteor/meteor';
 import { HTTP } from 'meteor/http';
 
-import CustomersCollection from '../../customers/collection';
+import StripeHelper from '../../cards/server/stripe_helper';
+import bugsnag from '../../bugsnag/server/bugsnag';
 
 const Subscription = {
   create(orderData) {
@@ -85,10 +86,19 @@ const Subscription = {
       customer.email = orderData.customer.email;
       customer.firstName = orderData.customer.first_name;
       customer.lastName = orderData.customer.last_name;
-      const loadedCustomer =
-        CustomersCollection.findOne({ email: customer.email });
-      if (loadedCustomer) {
-        customer.stripeCustomerId = loadedCustomer.stripeCustomerId;
+      try {
+        customer.stripeCustomerId = StripeHelper.findCustomerId(customer.email);
+      } catch (error) {
+        bugsnag.notify(error, {
+          message: 'Problem getting customer ID from Stripe',
+          customer,
+        });
+      }
+      if (!customer.stripeCustomerId) {
+        bugsnag.notify(
+          new Error('Problem getting customer ID from Stripe'),
+          { customer },
+        );
       }
     }
     return customer;
