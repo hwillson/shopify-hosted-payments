@@ -38,6 +38,30 @@ const Subscription = {
 
   _subscriptionFrequencyId: 'w1',
 
+  _prepareSubscription(orderData) {
+    const productData = this._prepareProducts(orderData);
+    const customer = this._prepareCustomer(orderData);
+    const shippingMethod = this._prepareShippingMethod(orderData);
+    const order = this._prepareOrder(orderData);
+
+    const subscriptionData = {
+      apiKey: process.env.MP_API_KEY,
+      sendSubscriptionIdToStore: true,
+      includesFreeTrial: productData.includesFreeTrial,
+      subscription: {
+        renewalFrequencyId: this._subscriptionFrequencyId,
+        shippingMethodId: shippingMethod.shippingMethodId,
+        shippingMethodName: shippingMethod.shippingMethodName,
+        shippingCost: shippingMethod.shippingCost,
+      },
+      customer,
+      order,
+      subscriptionItems: productData.products,
+    };
+
+    return subscriptionData;
+  },
+
   _prepareProducts(orderData) {
     const productData = {
       products: [],
@@ -125,30 +149,6 @@ const Subscription = {
       order.orderDate = orderData.created_at;
     }
     return order;
-  },
-
-  _prepareSubscription(orderData) {
-    const productData = this._prepareProducts(orderData);
-    const customer = this._prepareCustomer(orderData);
-    const shippingMethod = this._prepareShippingMethod(orderData);
-    const order = this._prepareOrder(orderData);
-
-    const subscriptionData = {
-      apiKey: process.env.MP_API_KEY,
-      sendSubscriptionIdToStore: true,
-      includesFreeTrial: productData.includesFreeTrial,
-      subscription: {
-        renewalFrequencyId: this._subscriptionFrequencyId,
-        shippingMethodId: shippingMethod.shippingMethodId,
-        shippingMethodName: shippingMethod.shippingMethodName,
-        shippingCost: shippingMethod.shippingCost,
-      },
-      customer,
-      order,
-      subscriptionItems: productData.products,
-    };
-
-    return subscriptionData;
   },
 };
 

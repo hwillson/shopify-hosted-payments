@@ -16,12 +16,24 @@ CustomersCollection.chargeCustomer = (payment) => {
       // charge that customer.
       stripeCustomerId = payment.stripe_customer_id;
     } else {
+      const customerDetails = {
+        email: payment.x_customer_email
+          ? payment.x_customer_email
+          : payment.email,
+        firstName: payment.x_customer_first_name
+          ? payment.x_customer_first_name
+          : payment.customer.first_name,
+        lastName: payment.x_customer_last_name
+          ? payment.x_customer_last_name
+          : payment.customer.last_name,
+      };
+
       // Create the customer in stripe assigning them the referenced
       // credit card, then save their details in the local customers collection.
       // If matching customer already exists in Stripe, update that
       // customers payment method.
       const stripeCustomer = StripeHelper.createCustomer({
-        email: payment.x_customer_email,
+        email: customerDetails.email,
         tokenId: payment.stripe_token,
       });
       stripeCustomerId = stripeCustomer.id;
@@ -29,19 +41,26 @@ CustomersCollection.chargeCustomer = (payment) => {
       // We're removing then inserting customers (instead of upserting) to fix
       // an old bug that allowed multiple similar customer to be saved in the
       // DB.
-      CustomersCollection.remove({ email: payment.x_customer_email });
+      CustomersCollection.remove({ email: customerDetails.email });
       CustomersCollection.insert({
-        firstName: payment.x_customer_first_name,
-        lastName: payment.x_customer_last_name,
-        email: payment.x_customer_email,
+        firstName: customerDetails.firstName,
+        lastName: customerDetails.lastName,
+        email: customerDetails.email,
         stripeCustomerId,
       });
     }
 
+    const chargeDetails = {
+      amount: (payment.x_amount ? payment.x_amount : +payment.total_price) * 100,
+      description: payment.x_description
+        ? `Charge for ${payment.x_description}`
+        : `Charge for subscription order #${payment.id}`,
+    };
+
     charge = StripeHelper.chargeCard({
       customerId: stripeCustomerId,
-      amount: payment.x_amount * 100,
-      description: `Charge for ${payment.x_description}`,
+      amount: chargeDetails.amount,
+      description: chargeDetails.description,
     });
   }
   return charge;

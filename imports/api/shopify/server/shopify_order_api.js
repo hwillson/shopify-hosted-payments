@@ -49,7 +49,6 @@ const shopifyOrderApi = {
             order: {
               id: orderId,
               financial_status: 'paid',
-              note: 'Credit card billing retry attempt has succeeded.',
             },
           },
         }

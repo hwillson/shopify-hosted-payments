@@ -4,6 +4,7 @@ import bodyParser from 'body-parser';
 
 import ShopifyRequest from '../../api/shopify/server/shopify_request';
 import ShopifyCustomerApi from '../../api/shopify/server/shopify_customer_api';
+import shopifyOrderApi from '../../api/shopify/server/shopify_order_api';
 import Payments from '../../api/payments/collection';
 import ShopifyResponse from '../../api/shopify/server/shopify_response';
 import CustomersCollection from '../../api/customers/collection';
@@ -109,6 +110,72 @@ const RouteHandler = {
     response.end(JSON.stringify(saveTokenResponse));
   },
 
+  subscriptionPurchase(params, req, res) {
+    const payment = req.body;
+    if (payment) {
+      const failureRedirect = () => {
+        const checkoutUrl = payment.order_status_url.test(/^(.*)thank_you/)[1];
+        res.writeHead(302, {
+          Location: `${checkoutUrl}?step=payment_method&failed=1`,
+        });
+      };
+
+      // Make sure the order contains a subscription product
+      let subscriptionProductFound = false;
+      const lineItems = payment.line_items;
+      lineItems.forEach((lineItem) => {
+        if (lineItem.sku.indexOf('TF_SUB') > -1) {
+          subscriptionProductFound = true;
+        }
+      });
+      if (subscriptionProductFound) {
+        // First try to find the customers previously saved stripe token
+        const tokenData = tokensCollection.findOne({ email: payment.email });
+        if (tokenData && tokenData.token) {
+          payment.stripe_token = tokenData.token;
+        } else {
+          // If no previously saved token, as a fallback see if a matching
+          // customer can be found with a saved stripe customer ID.
+          const customer =
+            CustomersCollection.findOne({ email: payment.email });
+          if (customer && customer.stripeCustomerId) {
+            payment.stripe_customer_id = customer.stripeCustomerId;
+          }
+        }
+
+        if (payment.stripe_token || payment.stripe_customer_id) {
+          // Log incoming payment details for reference
+          const paymentId = Payments.insert(payment);
+
+          if (this._chargeCustomer(paymentId, payment)) {
+            // Let Shopify know the order has been paid for
+            shopifyOrderApi.markOrderAsPaid(payment.id, +payment.total_price);
+
+            // Create new subscription in MP
+            Subscription.create(payment);
+
+            // Clear any previously saved stripe tokens for the payment customer,
+            // since token use is one-time
+            if (payment.stripe_token) {
+              tokensCollection.remove({ email: payment.x_customer_email });
+            }
+          }
+        } else {
+          bugsnag.notify(
+            new Error(
+              'Unable to find a saved stripe token or stripe customer ID '
+              + 'in the payments database for '
+              + `customer email ${payment.email}.`
+            ),
+            payment
+          );
+          failureRedirect();
+        }
+      }
+    }
+    res.end();
+  },
+
   incomingPaymentWithoutToken(params, req, res) {
     const shopifyRequest = Object.create(ShopifyRequest);
     shopifyRequest.init(req.body);
@@ -179,26 +246,6 @@ const RouteHandler = {
       tokensCollection.remove({ email: payment.x_customer_email });
     }
 
-    res.end();
-  },
-
-  // When the Shopify "Order Payment" event is fired, this webhook can be called
-  // to send order data into a 3rd party subscription system.
-  orderPayment(params, req, res) {
-    const orderData = req.body;
-    if (orderData) {
-      let subscriptionProductFound = false;
-      const lineItems = orderData.line_items;
-      lineItems.forEach((lineItem) => {
-        if (lineItem.sku.indexOf('TF_SUB') > -1) {
-          subscriptionProductFound = true;
-        }
-      });
-      if (subscriptionProductFound) {
-        // Subscription order found; create new subscription in MP
-        Subscription.create(orderData);
-      }
-    }
     res.end();
   },
 
@@ -405,17 +452,21 @@ const RouteHandler = {
   _chargeCustomer(paymentId, payment, tokenData) {
     let success = false;
     if (paymentId && payment) {
+      let charge;
       try {
         // Make sure charges for the incoming order haven't already been
         // successful.
+        const paymentIdSelector = payment.x_reference
+          ? { x_reference: payment.x_reference }
+          : { id: payment.id };
         if (Payments.find({
-          x_reference: payment.x_reference,
+          paymentIdSelector,
           status: 'completed',
         }).count()) {
           throw new Error('Duplicate charge attempted; new charge ignored.');
         }
 
-        const charge = CustomersCollection.chargeCustomer(payment);
+        charge = CustomersCollection.chargeCustomer(payment);
 
         // Updated saved payment details with successful Stripe charge
         // reference information
@@ -443,7 +494,7 @@ const RouteHandler = {
         // information
         Payments.update(
           { _id: paymentId },
-          { $set: { status: 'failed', error, charge: null } }
+          { $set: { status: 'failed', error, charge } }
         );
       }
     }
@@ -475,8 +526,8 @@ Picker.route(
 );
 
 Picker.route(
-  '/order-payment',
-  (params, req, res) => RouteHandler.orderPayment(params, req, res)
+  '/subscription-purchase',
+  (params, req, res) => RouteHandler.subscriptionPurchase(params, req, res)
 );
 
 Picker.route(
