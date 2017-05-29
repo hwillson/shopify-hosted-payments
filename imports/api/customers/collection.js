@@ -20,13 +20,19 @@ CustomersCollection.chargeCustomer = (payment) => {
         email: payment.x_customer_email
           ? payment.x_customer_email
           : payment.email,
-        firstName: payment.x_customer_first_name
-          ? payment.x_customer_first_name
-          : payment.customer.first_name,
-        lastName: payment.x_customer_last_name
-          ? payment.x_customer_last_name
-          : payment.customer.last_name,
       };
+      if (payment.x_customer_first_name || payment.customer) {
+        customerDetails.firstName =
+          payment.x_customer_first_name
+            ? payment.x_customer_first_name
+            : payment.customer.first_name;
+      }
+      if (payment.x_customer_last_name || payment.customer) {
+        customerDetails.lastName =
+          payment.x_customer_last_name
+            ? payment.x_customer_last_name
+            : payment.customer.last_name;
+      }
 
       // Create the customer in stripe assigning them the referenced
       // credit card, then save their details in the local customers collection.
@@ -51,7 +57,7 @@ CustomersCollection.chargeCustomer = (payment) => {
     }
 
     const chargeDetails = {
-      amount: (payment.x_amount ? payment.x_amount : +payment.total_price) * 100,
+      amount: payment.x_amount ? payment.x_amount : +payment.total_price,
       description: payment.x_description
         ? `Charge for ${payment.x_description}`
         : `Charge for subscription order #${payment.id}`,

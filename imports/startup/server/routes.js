@@ -112,65 +112,54 @@ const RouteHandler = {
 
   subscriptionPurchase(params, req, res) {
     const payment = req.body;
-    if (payment) {
-      const failureRedirect = () => {
-        const checkoutUrl = payment.order_status_url.test(/^(.*)thank_you/)[1];
-        res.writeHead(302, {
-          Location: `${checkoutUrl}?step=payment_method&failed=1`,
-        });
-      };
+    let statusCode = 400;
+    const paymentResponse = {};
+    if (payment && payment.email && payment.stripe_token
+        && payment.total_price) {
+      try {
+        const paymentId = Payments.insert(payment);
 
+        if (this._chargeCustomer(paymentId, payment)) {
+          statusCode = 200;
+          paymentResponse.success = true;
+          paymentResponse.message = 'Card charged.';
+        } else {
+          paymentResponse.success = false;
+          paymentResponse.message = 'Unable to charge card.';
+        }
+      } catch (error) {
+        paymentResponse.success = false;
+        paymentResponse.message = 'Unable to charge card.';
+        paymentResponse.details = error;
+      }
+    } else {
+      paymentResponse.success = false;
+      paymentResponse.message = 'Missing payment details.';
+    }
+
+    const response = res;
+    this._setHeaders(req, response);
+    response.statusCode = statusCode;
+    response.end(JSON.stringify(paymentResponse));
+  },
+
+  createSubscription(params, req, res) {
+    const order = req.body;
+    if (order) {
       // Make sure the order contains a subscription product
       let subscriptionProductFound = false;
-      const lineItems = payment.line_items;
+      const lineItems = order.line_items;
       lineItems.forEach((lineItem) => {
         if (lineItem.sku.indexOf('TF_SUB') > -1) {
           subscriptionProductFound = true;
         }
       });
       if (subscriptionProductFound) {
-        // First try to find the customers previously saved stripe token
-        const tokenData = tokensCollection.findOne({ email: payment.email });
-        if (tokenData && tokenData.token) {
-          payment.stripe_token = tokenData.token;
-        } else {
-          // If no previously saved token, as a fallback see if a matching
-          // customer can be found with a saved stripe customer ID.
-          const customer =
-            CustomersCollection.findOne({ email: payment.email });
-          if (customer && customer.stripeCustomerId) {
-            payment.stripe_customer_id = customer.stripeCustomerId;
-          }
-        }
+        // Let Shopify know the order has been paid for
+        shopifyOrderApi.markOrderAsPaid(order.id, +order.total_price);
 
-        if (payment.stripe_token || payment.stripe_customer_id) {
-          // Log incoming payment details for reference
-          const paymentId = Payments.insert(payment);
-
-          if (this._chargeCustomer(paymentId, payment)) {
-            // Let Shopify know the order has been paid for
-            shopifyOrderApi.markOrderAsPaid(payment.id, +payment.total_price);
-
-            // Create new subscription in MP
-            Subscription.create(payment);
-
-            // Clear any previously saved stripe tokens for the payment customer,
-            // since token use is one-time
-            if (payment.stripe_token) {
-              tokensCollection.remove({ email: payment.x_customer_email });
-            }
-          }
-        } else {
-          bugsnag.notify(
-            new Error(
-              'Unable to find a saved stripe token or stripe customer ID '
-              + 'in the payments database for '
-              + `customer email ${payment.email}.`
-            ),
-            payment
-          );
-          failureRedirect();
-        }
+        // Create new subscription in MP
+        Subscription.create(order);
       }
     }
     res.end();
@@ -454,18 +443,6 @@ const RouteHandler = {
     if (paymentId && payment) {
       let charge;
       try {
-        // Make sure charges for the incoming order haven't already been
-        // successful.
-        const paymentIdSelector = payment.x_reference
-          ? { x_reference: payment.x_reference }
-          : { id: payment.id };
-        if (Payments.find({
-          paymentIdSelector,
-          status: 'completed',
-        }).count()) {
-          throw new Error('Duplicate charge attempted; new charge ignored.');
-        }
-
         charge = CustomersCollection.chargeCustomer(payment);
 
         // Updated saved payment details with successful Stripe charge
@@ -496,6 +473,7 @@ const RouteHandler = {
           { _id: paymentId },
           { $set: { status: 'failed', error, charge } }
         );
+        throw error;
       }
     }
     return success;
@@ -528,6 +506,11 @@ Picker.route(
 Picker.route(
   '/subscription-purchase',
   (params, req, res) => RouteHandler.subscriptionPurchase(params, req, res)
+);
+
+Picker.route(
+  '/create-subscription',
+  (params, req, res) => RouteHandler.createSubscription(params, req, res)
 );
 
 Picker.route(
