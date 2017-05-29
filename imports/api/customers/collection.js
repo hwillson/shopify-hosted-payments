@@ -60,7 +60,7 @@ CustomersCollection.chargeCustomer = (payment) => {
       amount: payment.x_amount ? payment.x_amount : +payment.total_price,
       description: payment.x_description
         ? `Charge for ${payment.x_description}`
-        : `Charge for subscription order #${payment.id}`,
+        : 'Charge for subscription order',
     };
 
     charge = StripeHelper.chargeCard({

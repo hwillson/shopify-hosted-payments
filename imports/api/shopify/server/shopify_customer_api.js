@@ -78,7 +78,8 @@ const ShopifyCustomerApi = {
 
   updateStripeMetafield({ payment, charge }) {
     if (payment && charge) {
-      const customer = this.findCustomer(payment.x_customer_email);
+      const email = payment.x_customer_email || payment.email;
+      const customer = this.findCustomer(email);
       if (customer) {
         this.updateMetafield({
           customerId: customer.id,
