@@ -117,6 +117,7 @@ const RouteHandler = {
     if (payment && payment.email && payment.stripe_token
         && payment.total_price) {
       try {
+        payment.timestamp = new Date();
         const paymentId = Payments.insert(payment);
 
         if (this._chargeCustomer(paymentId, payment)) {
@@ -155,6 +156,18 @@ const RouteHandler = {
         }
       });
       if (subscriptionProductFound) {
+        // Save the incoming order ID with the received payment, for future
+        // reference.
+        Payments.update({
+          email: order.email,
+          order_id: { $exists: false },
+          status: 'completed',
+        }, {
+          $set: {
+            order_id: order.id,
+          },
+        });
+
         // Let Shopify know the order has been paid for
         shopifyOrderApi.markOrderAsPaid(order.id, +order.total_price);
 
@@ -342,8 +355,8 @@ const RouteHandler = {
 
   orderCancelled(params, req, res) {
     const order = req.body;
-    if (order && order.checkout_id) {
-      Payments.refund(order.checkout_id);
+    if (order && order.id) {
+      Payments.refund(order.id);
     }
     res.end();
   },

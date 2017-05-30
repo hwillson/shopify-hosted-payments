@@ -2,9 +2,9 @@ import { Mongo } from 'meteor/mongo';
 
 const Payments = new Mongo.Collection('payments');
 
-Payments.refund = (invoiceId) => {
-  if (invoiceId) {
-    const payment = Payments.findOne({ x_invoice: `#${invoiceId}` });
+Payments.refund = (orderId) => {
+  if (orderId) {
+    const payment = Payments.findOne({ order_id: orderId });
     if (payment && payment.charge.id) {
       import StripeHelper from '../cards/server/stripe_helper';
       StripeHelper.refundCharge(payment.charge.id);
