@@ -147,6 +147,7 @@ const Subscription = {
       order.orderId = orderData.id;
       order.orderTypeId = 'new';
       order.orderDate = orderData.created_at;
+      order.totalPrice = orderData.total_price;
     }
     return order;
   },
