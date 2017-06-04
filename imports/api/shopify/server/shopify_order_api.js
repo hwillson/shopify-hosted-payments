@@ -1,6 +1,8 @@
 import { Meteor } from 'meteor/meteor';
 import { HTTP } from 'meteor/http';
 
+import bugsnag from '../../bugsnag/server/bugsnag';
+
 const shopifyOrderApi = {
   getPendingOrders() {
     let orders = [];
@@ -25,7 +27,8 @@ const shopifyOrderApi = {
       const serviceUrl = Meteor.settings.private.shopifyServiceUrl;
       const apiKey = process.env.SHOPIFY_API_KEY;
       const apiPass = process.env.SHOPIFY_API_PASS;
-      HTTP.call(
+
+      const response = HTTP.call(
         'POST',
         `${serviceUrl}/orders/${orderId}/transactions.json`,
         {
@@ -40,19 +43,33 @@ const shopifyOrderApi = {
         }
       );
 
-      HTTP.call(
-        'PUT',
-        `${serviceUrl}/orders/${orderId}.json`,
-        {
-          auth: `${apiKey}:${apiPass}`,
-          data: {
-            order: {
-              id: orderId,
-              financial_status: 'paid',
+      if (response.statusCode === 200) {
+        HTTP.call(
+          'PUT',
+          `${serviceUrl}/orders/${orderId}.json`,
+          {
+            auth: `${apiKey}:${apiPass}`,
+            data: {
+              order: {
+                id: orderId,
+                financial_status: 'paid',
+              },
             },
+          }
+        );
+      } else {
+        bugsnag.notify(
+          new Error(
+            'Unable to add a "capture" transaction to Shopify. This has to be '
+            + 'in place before we can set an orders status to paid. Verify '
+            + `order ID ${orderId} exists in Shopify.`
+          ),
+          {
+            orderId,
+            totalPrice,
           },
-        }
-      );
+        );
+      }
     }
   },
 };
