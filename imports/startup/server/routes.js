@@ -296,25 +296,27 @@ const RouteHandler = {
   chargeCard(params, req, res) {
     const chargeDetails = req.body;
     let statusCode = 400;
-    const chargeResponse = {};
+    const chargeResponse = {
+      success: false,
+      message: 'Missing charge details.',
+    };
     if (chargeDetails) {
       try {
-        StripeHelper.chargeCard({
+        const charge = StripeHelper.chargeCard({
           customerId: chargeDetails.stripeCustomerId,
           amount: chargeDetails.amount,
           description: chargeDetails.description,
         });
-        statusCode = 200;
-        chargeResponse.success = true;
-        chargeResponse.message = 'Card charged.';
+        if (charge) {
+          statusCode = 200;
+          chargeResponse.success = true;
+          chargeResponse.message = 'Card charged.';
+        }
       } catch (error) {
         chargeResponse.success = false;
         chargeResponse.message = 'Unable to charge card.';
         chargeResponse.details = error;
       }
-    } else {
-      chargeResponse.success = false;
-      chargeResponse.message = 'Missing charge details.';
     }
 
     const response = res;
