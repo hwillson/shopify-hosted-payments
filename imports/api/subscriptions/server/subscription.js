@@ -3,6 +3,7 @@ import { HTTP } from 'meteor/http';
 
 import StripeHelper from '../../cards/server/stripe_helper';
 import bugsnag from '../../bugsnag/server/bugsnag';
+import CustomersCollection from '../../customers/collection';
 
 const Subscription = {
   create(orderData) {
@@ -110,8 +111,16 @@ const Subscription = {
       customer.email = orderData.customer.email;
       customer.firstName = orderData.customer.first_name;
       customer.lastName = orderData.customer.last_name;
+
       try {
-        customer.stripeCustomerId = StripeHelper.findCustomerId(customer.email);
+        const savedCustomer =
+          CustomersCollection.findOne({ email: customer.email });
+        if (savedCustomer && savedCustomer.stripeCustomerId) {
+          customer.stripeCustomerId = savedCustomer.stripeCustomerId;
+        } else {
+          customer.stripeCustomerId =
+            StripeHelper.findCustomerId(customer.email);
+        }
       } catch (error) {
         bugsnag.notify(error, {
           message: 'Problem getting customer ID from Stripe',
