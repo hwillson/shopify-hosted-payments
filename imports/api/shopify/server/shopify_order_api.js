@@ -43,7 +43,7 @@ const shopifyOrderApi = {
         }
       );
 
-      if (response.statusCode === 200) {
+      if (response.statusCode === 201) {
         HTTP.call(
           'PUT',
           `${serviceUrl}/orders/${orderId}.json`,
