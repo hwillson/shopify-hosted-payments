@@ -1,5 +1,6 @@
 import { Meteor } from 'meteor/meteor';
 import { HTTP } from 'meteor/http';
+import R from 'ramda';
 
 import StripeHelper from '../../cards/server/stripe_helper';
 import bugsnag from '../../bugsnag/server/bugsnag';
@@ -93,10 +94,15 @@ const Subscription = {
             }
           });
         } else {
+          const discountPercent = R.multiply(
+            R.divide(+lineItem.total_discount, +lineItem.price),
+            100,
+          );
           productData.products.push({
             productId: lineItem.product_id,
             variationId: lineItem.variant_id,
             quantity: lineItem.quantity,
+            discountPercent,
           });
         }
       });

@@ -28,47 +28,57 @@ const shopifyOrderApi = {
       const apiKey = process.env.SHOPIFY_API_KEY;
       const apiPass = process.env.SHOPIFY_API_PASS;
 
-      const response = HTTP.call(
-        'POST',
-        `${serviceUrl}/orders/${orderId}/transactions.json`,
-        {
-          auth: `${apiKey}:${apiPass}`,
-          data: {
-            transaction: {
-              kind: 'capture',
-              status: 'success',
-              amount: totalPrice,
-            },
-          },
-        }
-      );
-
-      if (response.statusCode === 201) {
-        HTTP.call(
-          'PUT',
-          `${serviceUrl}/orders/${orderId}.json`,
+      try {
+        const response = HTTP.call(
+          'POST',
+          `${serviceUrl}/orders/${orderId}/transactions.json`,
           {
             auth: `${apiKey}:${apiPass}`,
             data: {
-              order: {
-                id: orderId,
-                financial_status: 'paid',
+              transaction: {
+                kind: 'capture',
+                status: 'success',
+                amount: totalPrice,
               },
             },
           }
         );
-      } else {
-        bugsnag.notify(
-          new Error(
-            'Unable to add a "capture" transaction to Shopify. This has to be '
-            + 'in place before we can set an orders status to paid. Verify '
-            + `order ID ${orderId} exists in Shopify.`
-          ),
-          {
+
+        if (response.statusCode === 201) {
+          HTTP.call(
+            'PUT',
+            `${serviceUrl}/orders/${orderId}.json`,
+            {
+              auth: `${apiKey}:${apiPass}`,
+              data: {
+                order: {
+                  id: orderId,
+                  financial_status: 'paid',
+                },
+              },
+            }
+          );
+        } else {
+          bugsnag.notify(
+            new Error(
+              'Unable to add a "capture" transaction to Shopify. This has to be '
+              + 'in place before we can set an orders status to paid. Verify '
+              + `order ID ${orderId} exists in Shopify.`
+            ),
+            {
+              orderId,
+              totalPrice,
+            },
+          );
+        }
+      } catch (error) {
+        bugsnag.notify(error, {
+          message: 'Problem marking order as paid in shopify.',
+          order: {
             orderId,
             totalPrice,
           },
-        );
+        });
       }
     }
   },
