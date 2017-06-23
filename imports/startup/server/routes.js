@@ -367,38 +367,30 @@ const RouteHandler = {
     const reqData = req.body;
     if (reqData && reqData.data) {
       const eventData = JSON.parse(reqData.data);
+      klaviyo.trackEvent(eventData);
       switch (eventData.event) {
         case 'New Subscription': {
           loyaltyLion.changeToSubscriptionTier(
             eventData.extra.externalCustomerId
           );
-          klaviyo.trackEvent(eventData);
           break;
         }
         case 'Cancelled Subscription': {
           loyaltyLion.changeToGoldTier(eventData.extra.externalCustomerId);
-          klaviyo.trackEvent(eventData);
           break;
         }
         case 'Paused Subscription': {
           loyaltyLion.changeToGoldTier(eventData.extra.externalCustomerId);
-          klaviyo.trackEvent(eventData);
           break;
         }
         case 'Resumed Subscription': {
           loyaltyLion.changeToSubscriptionTier(
             eventData.extra.externalCustomerId
           );
-          klaviyo.trackEvent(eventData);
-          break;
-        }
-        case 'Renewed Subscription': {
-          klaviyo.trackEvent(eventData);
           break;
         }
         case 'Payment Failed': {
           loyaltyLion.changeToGoldTier(eventData.extra.externalCustomerId);
-          klaviyo.trackEvent(eventData);
           break;
         }
         default: {

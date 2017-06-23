@@ -5,22 +5,21 @@ const klaviyo = {
 
   trackEvent(eventData) {
     if (eventData) {
+      const properties = {
+        subscription_id: eventData.extra.subscriptionId,
+        subscription_status: eventData.extra.subscriptionStatus,
+        next_shipment_date: eventData.extra.nextShipmentDate,
+        total_subscription_price: eventData.extra.totalSubscriptionPrice,
+      };
       const data = {
         token: process.env.KLAVIYO_API_KEY,
         event: eventData.event,
-        customer_properties: {
+        customer_properties: Object.assign({
           $email: eventData.extra.customerEmail,
-          subscription_id: eventData.extra.subscriptionId,
-          next_shipment_date: eventData.extra.nextShipmentDate,
-          total_subscription_price: eventData.extra.totalSubscriptionPrice,
+        }, properties),
+        properties: Object.assign({
           subscription_items: eventData.extra.subscriptionItems,
-        },
-        properties: {
-          subscription_id: eventData.extra.subscriptionId,
-          next_shipment_date: eventData.extra.nextShipmentDate,
-          total_subscription_price: eventData.extra.totalSubscriptionPrice,
-          subscription_items: eventData.extra.subscriptionItems,
-        },
+        }, properties),
       };
 
       const jsonData = JSON.stringify(data);
