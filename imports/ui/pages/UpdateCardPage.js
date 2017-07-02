@@ -134,6 +134,7 @@ styles = StyleSheet.create({
     textAlign: 'center',
     padding: '10px 0',
     borderBottom: '1px solid #E5E5E5',
+    backgroundColor: '#1d374d',
   },
   updateCardContainer: {
     textAlign: 'center',
