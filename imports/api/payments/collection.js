@@ -1,4 +1,5 @@
 import { Mongo } from 'meteor/mongo';
+import moment from 'moment';
 
 const Payments = new Mongo.Collection('payments');
 
@@ -11,6 +12,14 @@ Payments.refund = (orderId) => {
     }
   }
 };
+
+Payments.recentPaymentCompleted = email => Payments.findOne({
+  email,
+  status: 'completed',
+  timestamp: {
+    $gte: moment().subtract(10, 'minutes').toDate(),
+  },
+});
 
 Payments.deny({
   insert() { return true; },

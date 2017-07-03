@@ -155,7 +155,8 @@ const RouteHandler = {
           subscriptionProductFound = true;
         }
       });
-      if (subscriptionProductFound) {
+      if (subscriptionProductFound
+          && Payments.recentPaymentCompleted(order.email)) {
         // Save the incoming order ID with the received payment, for future
         // reference.
         Payments.update({
