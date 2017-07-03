@@ -24,7 +24,8 @@ const updateCard = new ValidatedMethod({
       const customerMetadata =
         ShopifyCustomerApi.getCustomerMetadata(shopifyCustomer.id);
 
-      if (!customerMetadata || !customerMetadata.stripe.stripeCustomerId) {
+      if (!customerMetadata || !customerMetadata.stripe
+          || !customerMetadata.stripe.stripeCustomerId) {
         throw new Meteor.Error(
           `Can't find Stripe customer ID for Shopify customer ${shopifyCustomer.id}`
         );
