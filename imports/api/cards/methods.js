@@ -23,18 +23,22 @@ const updateCard = new ValidatedMethod({
       // Find the customer's Stripe ID
       const customerMetadata =
         ShopifyCustomerApi.getCustomerMetadata(shopifyCustomer.id);
+      let customerStripeId;
 
-      if (!customerMetadata || !customerMetadata.stripe
-          || !customerMetadata.stripe.stripeCustomerId) {
-        throw new Meteor.Error(
-          `Can't find Stripe customer ID for Shopify customer ${shopifyCustomer.id}`
-        );
+      import StripeHelper from './server/stripe_helper';
+
+      if (customerMetadata && customerMetadata.stripe
+          && customerMetadata.stripe.stripeCustomerId) {
+        customerStripeId = customerMetadata.stripe.stripeCustomerId;
+      } else {
+        // If the customers Stripe ID can't be pulled from Shopify, try to
+        // get it from Stripe.
+        customerStripeId = StripeHelper.findCustomerId(email);
       }
 
       // Update the customers credit card
-      import StripeHelper from './server/stripe_helper';
       const customerData = StripeHelper.updateCard({
-        customerId: customerMetadata.stripe.stripeCustomerId,
+        customerId: customerStripeId,
         tokenId,
       });
 
