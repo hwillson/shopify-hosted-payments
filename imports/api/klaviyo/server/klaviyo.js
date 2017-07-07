@@ -19,6 +19,7 @@ const klaviyo = {
         }, properties),
         properties: Object.assign({
           subscription_items: eventData.extra.subscriptionItems,
+          subscription_is_free_trial: eventData.extra.isFreeTrial,
         }, properties),
       };
 
