@@ -27,7 +27,6 @@ const Subscription = {
         `${Meteor.settings.private.subscriptions.serviceUrl}`
         + `/api/subscriptions/${subscriptionId}/renew`;
       const bearer = new Buffer(process.env.MP_API_KEY).toString('base64');
-console.log(bearer);
       HTTP.put(
         subServiceUrl,
         {
