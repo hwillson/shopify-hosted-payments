@@ -25,10 +25,16 @@ const Subscription = {
     if (subscriptionId) {
       const subServiceUrl =
         `${Meteor.settings.private.subscriptions.serviceUrl}`
-        + '/methods/api_UpdateSubscriptionStatus';
-      HTTP.post(
+        + `/api/subscriptions/${subscriptionId}/renew`;
+      const bearer = new Buffer(process.env.MP_API_KEY).toString('base64');
+console.log(bearer);
+      HTTP.put(
         subServiceUrl,
-        { data: { subscriptionId, statusId: 'active', renewNow: true } },
+        {
+          headers: {
+            authorization: `Bearer ${bearer}`,
+          },
+        },
         (error) => {
           if (error) {
             throw error;

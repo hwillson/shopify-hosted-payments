@@ -52,7 +52,8 @@ const updateCard = new ValidatedMethod({
       });
 
       if (customerMetadata.subscriptionId) {
-        // Resume subscription in MorePlease, setting it to renew tomorrow
+        // Resume the subscription in MorePlease (if the last payment failed),
+        // by retrying payment and creating a new renewal order.
         import Subscription from '../subscriptions/server/subscription';
         Subscription.resume(customerMetadata.subscriptionId);
       }
