@@ -99,9 +99,13 @@ const Subscription = {
             }
           });
         } else {
-          const discountPercent = R.multiply(
-            R.divide(+lineItem.total_discount, +lineItem.price),
+          const totalPrice =
+            R.multiply(+lineItem.price, lineItem.quantity);
+          const totalDiscountedPrice =
+            R.subtract(totalPrice, +lineItem.total_discount);
+          const discountPercent = R.subtract(
             100,
+            R.multiply(R.divide(totalDiscountedPrice, totalPrice), 100),
           );
           productData.products.push({
             productId: lineItem.product_id,
