@@ -118,15 +118,29 @@ const RouteHandler = {
         && payment.total_price) {
       try {
         payment.timestamp = new Date();
-        const paymentId = Payments.insert(payment);
 
-        if (this._chargeCustomer(paymentId, payment)) {
+        // See if a matching payment already exists, and has been processed.
+        // If so, skip this payment. This is a safeguard to make sure a double
+        // submit for the exact same order isn't processed and billed for
+        // twice.
+        if (payment.checkout_token && Payments.findOne({
+          email: payment.email,
+          total_price: payment.total_price,
+          checkout_token: payment.checkout_token,
+        })) {
           statusCode = 200;
           paymentResponse.success = true;
-          paymentResponse.message = 'Card charged.';
+          paymentResponse.message = 'Card already charged; not charged again.';
         } else {
-          paymentResponse.success = false;
-          paymentResponse.message = 'Unable to charge card.';
+          const paymentId = Payments.insert(payment);
+          if (this._chargeCustomer(paymentId, payment)) {
+            statusCode = 200;
+            paymentResponse.success = true;
+            paymentResponse.message = 'Card charged.';
+          } else {
+            paymentResponse.success = false;
+            paymentResponse.message = 'Unable to charge card.';
+          }
         }
       } catch (error) {
         paymentResponse.success = false;
