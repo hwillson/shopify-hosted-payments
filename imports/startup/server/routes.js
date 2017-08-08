@@ -169,19 +169,20 @@ const RouteHandler = {
           subscriptionProductFound = true;
         }
       });
-      if (subscriptionProductFound
-          && Payments.recentPaymentCompleted(order.email)) {
-        // Save the incoming order ID with the received payment, for future
-        // reference.
-        Payments.update({
-          email: order.email,
-          order_id: { $exists: false },
-          status: 'completed',
-        }, {
-          $set: {
-            order_id: order.id,
-          },
-        });
+      if (subscriptionProductFound) {
+        if (Payments.recentPaymentCompleted(order.email)) {
+          // Save the incoming order ID with the received payment, for future
+          // reference.
+          Payments.update({
+            email: order.email,
+            order_id: { $exists: false },
+            status: 'completed',
+          }, {
+            $set: {
+              order_id: order.id,
+            },
+          });
+        }
 
         // Let Shopify know the order has been paid for
         shopifyOrderApi.markOrderAsPaid(order.id, +order.total_price);
