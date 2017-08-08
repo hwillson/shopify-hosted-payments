@@ -15,14 +15,9 @@ const StripeHelper = {
       });
 
       if (customer) {
-        let defaultCard = customer.sources.data.map((card) => {
-          let matchingCard;
-          if (card.id === customer.default_source) {
-            matchingCard = card;
-          }
-          return matchingCard;
-        });
-        defaultCard = defaultCard[0];
+        const defaultCard = customer.sources.data.filter(card =>
+          card.id === customer.default_source
+        )[0];
         customer.primaryCard = {
           stripeCustomerId: customer.id,
           cardType: defaultCard.brand,
