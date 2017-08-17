@@ -59,8 +59,10 @@ class UpdateCardPage extends Component {
               if (error) {
                 console.log(error);
               } else {
-                window.location.href =
-                  Meteor.settings.public.updateCardPage.doneUrl;
+                setTimeout(() => {
+                  window.location.href =
+                    Meteor.settings.public.updateCardPage.doneUrl;
+                }, 1000);
               }
             });
           }
