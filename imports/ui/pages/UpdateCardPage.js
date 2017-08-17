@@ -6,6 +6,8 @@ import { StyleSheet, css } from 'aphrodite';
 
 import getStripePubKey from '../../api/environment/methods';
 import updateCard from '../../api/cards/methods';
+import Loader from '../components/common/Loader';
+import UpdateCardButton from '../components/card/UpdateCardButton';
 
 let styles;
 
@@ -75,10 +77,6 @@ class UpdateCardPage extends Component {
     }
 
     if (this.stripeHandler) {
-      this.setState({
-        stripeCheckoutActive: true,
-      });
-
       const self = this;
       this.stripeHandler.open({
         name: Meteor.settings.public.paymentPage.companyName,
@@ -86,14 +84,26 @@ class UpdateCardPage extends Component {
         panelLabel: 'Update Credit Card',
         email: this.props.params.email,
         allowRememberMe: false,
+        opened() {
+          self.setState({
+            stripeCheckoutActive: true,
+          });
+        },
         closed() {
           if (!self.state.processingUpdate) {
+            self.setState({
+              stripeCheckoutActive: false,
+            });
             window.location.href =
               Meteor.settings.public.updateCardPage.doneUrl;
           }
         },
       });
     }
+  }
+
+  showLoader() {
+    return !this.state.stripeCheckoutActive || this.state.processingUpdate;
   }
 
   render() {
@@ -105,13 +115,7 @@ class UpdateCardPage extends Component {
           <img src={headerLogo} alt="Company logo" />
         </header>
         <section className={css(styles.updateCardContainer)}>
-          <a
-            href="#update-card"
-            className={css(styles.button)}
-            onClick={this.openStripeCheckout}
-          >
-            Update your credit card
-          </a>
+          { this.showLoader() ? <Loader /> : <UpdateCardButton /> }
         </section>
         <footer className={css(styles.footer)}>
           <img
@@ -139,16 +143,6 @@ styles = StyleSheet.create({
   updateCardContainer: {
     textAlign: 'center',
     paddingTop: '60px',
-  },
-  button: {
-    textTransform: 'uppercase',
-    padding: '20px',
-    fontSize: '13px',
-    borderRadius: '100px',
-    display: 'inline-block',
-    backgroundColor: '#FEBE43',
-    color: '#1c1d1d',
-    fontWeight: 'bold',
   },
   footer: {
     backgroundColor: '#0a1620',
