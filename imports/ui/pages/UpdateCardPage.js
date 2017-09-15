@@ -1,4 +1,5 @@
-/* global window, StripeCheckout */
+/* global window, StripeCheckout, alert */
+/* eslint-disable no-alert */
 
 import { Meteor } from 'meteor/meteor';
 import React, { Component } from 'react';
@@ -57,7 +58,13 @@ class UpdateCardPage extends Component {
               email,
             }, (error) => {
               if (error) {
-                console.log(error);
+                alert(
+                  "Oops - something went wrong. We'll send you back " +
+                  'to your account area. Please try again, or give us a ' +
+                  'shout if this problem keeps happening.'
+                );
+                window.location.href =
+                  Meteor.settings.public.updateCardPage.doneUrl;
               } else {
                 setTimeout(() => {
                   window.location.href =

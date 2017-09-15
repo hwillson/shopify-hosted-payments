@@ -66,6 +66,29 @@ const StripeHelper = {
     return stripeCustomer;
   },
 
+  createCustomerWithCard({ email, tokenId }) {
+    const stripe = require('stripe')(StripeKeys.secret);
+    const stripeCustomersCreateSync =
+      Meteor.wrapAsync(stripe.customers.create, stripe.customers);
+    const stripeCustomer = stripeCustomersCreateSync({
+      email,
+      source: tokenId,
+    });
+    if (stripeCustomer) {
+      const defaultCard = stripeCustomer.sources.data.filter(card =>
+        card.id === stripeCustomer.default_source
+      )[0];
+      stripeCustomer.primaryCard = {
+        stripeCustomerId: stripeCustomer.id,
+        cardType: defaultCard.brand,
+        cardExpYear: defaultCard.exp_year,
+        cardExpMonth: defaultCard.exp_month,
+        cardLast4: defaultCard.last4,
+      };
+    }
+    return stripeCustomer;
+  },
+
   findCustomerId(email) {
     let stripeCustomerId;
     if (email) {

@@ -10,14 +10,19 @@ const updateCard = new ValidatedMethod({
   }).validator(),
   run({ tokenId, email }) {
     if (!this.isSimulation) {
+      import bugsnag from '../bugsnag/server/bugsnag';
+
       // First find the matching Shopify customer record, by email
       import ShopifyCustomerApi from '../shopify/server/shopify_customer_api';
       const shopifyCustomer = ShopifyCustomerApi.findCustomer(email);
 
       if (!shopifyCustomer) {
-        throw new Meteor.Error(
-          `Can't find matching Shopify customer record with email ${email}`
+        const error = new Meteor.Error(
+          "Credit card update: Can't find matching Shopify customer " +
+          `record with email ${email}`
         );
+        bugsnag.notify(error);
+        throw error;
       }
 
       // Find the customer's Stripe ID
@@ -36,18 +41,31 @@ const updateCard = new ValidatedMethod({
         customerStripeId = StripeHelper.findCustomerId(email);
       }
 
-      // Update the customers credit card
-      const customerData = StripeHelper.updateCard({
-        customerId: customerStripeId,
-        tokenId,
-      });
+      let stripeCustomer;
+      if (customerStripeId) {
+        // Update the customers credit card
+        stripeCustomer = StripeHelper.updateCard({
+          customerId: customerStripeId,
+          tokenId,
+        });
+      } else {
+        // If a matching customer can't be found in Stripe, create a new
+        // account, and add the credit card to that account.
+        stripeCustomer = StripeHelper.createCustomerWithCard({ email, tokenId });
+        const error = new Error(
+          "Credit card update: Couldn't find a matching customer in " +
+          'Stripe, so created a new customer account in Stripe and ' +
+          'updated the credit card on that account. '
+        );
+        bugsnag.notify(error, { stripeCustomer });
+      }
 
       // Send new card details back to Shopify
       ShopifyCustomerApi.updateMetafield({
         customerId: shopifyCustomer.id,
         namespace: 'stripe',
         key: 'customer',
-        value: JSON.stringify(customerData.primaryCard),
+        value: JSON.stringify(stripeCustomer.primaryCard),
         valueType: 'string',
       });
 
