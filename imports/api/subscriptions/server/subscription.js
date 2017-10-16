@@ -142,11 +142,14 @@ const Subscription = {
           customer,
         });
       }
+
       if (!customer.stripeCustomerId) {
-        bugsnag.notify(
-          new Error('Problem getting customer ID from Stripe'),
-          { customer },
+        const error = new Error(
+          'Problem getting customer ID from Stripe; subscription ' +
+          'will not be created.'
         );
+        bugsnag.notify(error, { customer });
+        throw error;
       }
     }
     return customer;

@@ -184,11 +184,11 @@ const RouteHandler = {
           });
         }
 
-        // Let Shopify know the order has been paid for
-        shopifyOrderApi.markOrderAsPaid(order.id, +order.total_price);
-
         // Create new subscription in MP
         Subscription.create(order);
+
+        // Let Shopify know the order has been paid for
+        shopifyOrderApi.markOrderAsPaid(order.id, +order.total_price);
       }
     }
     res.end();
