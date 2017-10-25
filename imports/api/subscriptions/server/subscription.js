@@ -6,6 +6,8 @@ import StripeHelper from '../../cards/server/stripe_helper';
 import bugsnag from '../../bugsnag/server/bugsnag';
 import CustomersCollection from '../../customers/collection';
 
+const BEARER = new Buffer(process.env.MP_API_KEY).toString('base64');
+
 const Subscription = {
   create(orderData) {
     if (orderData) {
@@ -13,7 +15,13 @@ const Subscription = {
       const subServiceUrl =
         `${Meteor.settings.private.subscriptions.serviceUrl}`
         + '/subscriptions';
-      HTTP.post(subServiceUrl, { data: subscriptionData }, (error) => {
+      HTTP.post(subServiceUrl, {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${BEARER}`,
+        },
+        data: subscriptionData,
+      }, (error) => {
         if (error) {
           throw error;
         }
@@ -25,13 +33,13 @@ const Subscription = {
     if (subscriptionId) {
       const subServiceUrl =
         `${Meteor.settings.private.subscriptions.serviceUrl}`
-        + `/api/subscriptions/${subscriptionId}/renew`;
-      const bearer = new Buffer(process.env.MP_API_KEY).toString('base64');
+        + `/subscriptions/${subscriptionId}/renew`;
       HTTP.put(
         subServiceUrl,
         {
           headers: {
-            authorization: `Bearer ${bearer}`,
+            'Content-Type': 'application/json',
+            authorization: `Bearer ${BEARER}`,
           },
         },
         (error) => {
