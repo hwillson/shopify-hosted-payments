@@ -107,14 +107,35 @@ const Subscription = {
             }
           });
         } else {
-          const totalPrice =
-            R.multiply(+lineItem.price, lineItem.quantity);
-          const totalDiscountedPrice =
-            R.subtract(totalPrice, +lineItem.total_discount);
-          const discountPercent = R.subtract(
-            100,
-            R.multiply(R.divide(totalDiscountedPrice, totalPrice), 100),
-          );
+          // If a renewal_discount_percent value is set as a line item
+          // property, use that for the line item discount percent. Otherwise
+          // fallback on calculating the discount percent leveraging the
+          // line item's total_discount.
+          let discountPercent = 0;
+          if (lineItem.properties
+              && lineItem.properties.length > 0) {
+            lineItem.properties.forEach((property) => {
+              if (property.name
+                  && property.name === 'renewal_discount_percent') {
+                discountPercent = +property.value;
+              }
+            });
+          }
+
+          if (!discountPercent) {
+            const totalDiscount = +lineItem.total_discount;
+            if (totalDiscount > 0) {
+              const totalPrice =
+                R.multiply(+lineItem.price, lineItem.quantity);
+              const totalDiscountedPrice =
+                R.subtract(totalPrice, totalDiscount);
+              discountPercent = R.subtract(
+                100,
+                R.multiply(R.divide(totalDiscountedPrice, totalPrice), 100),
+              );
+            }
+          }
+
           productData.products.push({
             productId: lineItem.product_id,
             variationId: lineItem.variant_id,
