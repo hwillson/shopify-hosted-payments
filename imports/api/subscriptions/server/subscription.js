@@ -29,6 +29,29 @@ const Subscription = {
     }
   },
 
+  createCustomerDiscount(orderData) {
+    if (orderData) {
+      const data = {
+        customer: this._prepareCustomer(orderData),
+        customerDiscount: this._prepareCustomerDiscount(orderData),
+      };
+      const subServiceUrl =
+        `${Meteor.settings.private.subscriptions.serviceUrl}`
+        + '/customer_discounts';
+      HTTP.post(subServiceUrl, {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${BEARER}`,
+        },
+        data,
+      }, (error) => {
+        if (error) {
+          throw error;
+        }
+      });
+    }
+  },
+
   resume(subscriptionId) {
     if (subscriptionId) {
       const subServiceUrl =
@@ -54,6 +77,7 @@ const Subscription = {
   _subscriptionFrequencyId: 'w1',
 
   _prepareSubscription(orderData) {
+    const customerDiscount = this._prepareCustomerDiscount(orderData);
     const productData = this._prepareProducts(orderData);
     const customer = this._prepareCustomer(orderData);
     const shippingMethod = this._prepareShippingMethod(orderData);
@@ -70,11 +94,29 @@ const Subscription = {
         shippingCost: shippingMethod.shippingCost,
       },
       customer,
+      customerDiscount,
       order,
       subscriptionItems: productData.products,
     };
 
     return subscriptionData;
+  },
+
+  _prepareCustomerDiscount(orderData) {
+    const customerDiscount = {};
+    if (orderData && orderData.line_items) {
+      for (let i = 0; i < orderData.line_items.length; i += 1) {
+        const lineItem = orderData.line_items[i];
+        if (lineItem.sku.startsWith('TF_CLUB')) {
+          customerDiscount.label = 'TF_CLUB';
+          customerDiscount.durationMonths = 12;
+          customerDiscount.discountPercent = 15;
+          orderData.line_items.splice(i, 1);
+          break;
+        }
+      }
+    }
+    return customerDiscount;
   },
 
   _prepareProducts(orderData) {

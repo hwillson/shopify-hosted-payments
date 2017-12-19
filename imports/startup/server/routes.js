@@ -161,15 +161,24 @@ const RouteHandler = {
   createSubscription(params, req, res) {
     const order = req.body;
     if (order) {
-      // Make sure the order contains a subscription product
+      // See if the incoming order contains a subscription product and/or
+      // a club based customer discount product.
       let subscriptionProductFound = false;
+      let discountClubProductFound = false;
       const lineItems = order.line_items;
       lineItems.forEach((lineItem) => {
-        if (lineItem.sku.indexOf('TF_SUB') > -1) {
+        if (lineItem.sku.startsWith('TF_SUB')) {
           subscriptionProductFound = true;
         }
+        if (lineItem.sku.startsWith('TF_CLUB')) {
+          discountClubProductFound = true;
+        }
       });
+
       if (subscriptionProductFound) {
+        // Create a new subscription in the external subscription handling
+        // system. If a club discount product is included, it will be handled
+        // by the subscription system at the same time.
         if (Payments.recentPaymentCompleted(order.email)) {
           // Save the incoming order ID with the received payment, for future
           // reference.
@@ -184,12 +193,18 @@ const RouteHandler = {
           });
         }
 
-        // Create new subscription in MP
         Subscription.create(order);
-
-        // Let Shopify know the order has been paid for
-        shopifyOrderApi.markOrderAsPaid(order.id, +order.total_price);
+      } else if (discountClubProductFound) {
+        // If the incoming order doesn't include a subscription but does
+        // include a discount club product purchase, make sure the discount
+        // club details are sent into the subscription system, and associated
+        // with a customer (creating the customer if necessary). This will not
+        // create a full subscription.
+        Subscription.createCustomerDiscount(order);
       }
+
+      // Let Shopify know the order has been paid for
+      shopifyOrderApi.markOrderAsPaid(order.id, +order.total_price);
     }
     res.end();
   },
