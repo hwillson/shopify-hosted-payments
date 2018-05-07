@@ -302,6 +302,13 @@ const RouteHandler = {
           valueType: 'string',
         });
 
+        // Send the returned Stripe Customer ID back into the subscription
+        // system, in-case it has been changed.
+        Subscription.updateCustomer({
+          externalId: cardDetails.shopifyCustomerId,
+          stripeCustomerId: cardDetails.customerId,
+        });
+
         statusCode = 200;
         updateResponse.success = true;
         updateResponse.message = 'Card updated';

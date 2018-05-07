@@ -74,6 +74,25 @@ const Subscription = {
     }
   },
 
+  updateCustomer(customer) {
+    if (customer) {
+      const subServiceUrl =
+        `${Meteor.settings.private.subscriptions.serviceUrl}`
+        + `/customers/${customer.externalId}`;
+      HTTP.put(subServiceUrl, {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${BEARER}`,
+        },
+        data: customer,
+      }, (error) => {
+        if (error) {
+          throw error;
+        }
+      });
+    }
+  },
+
   _subscriptionFrequencyId: 'w1',
 
   _prepareSubscription(orderData) {
