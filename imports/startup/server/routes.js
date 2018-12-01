@@ -176,11 +176,14 @@ const RouteHandler = {
         }
       });
 
+      let paymentReceived = false;
       if (subscriptionProductFound) {
         // Create a new subscription in the external subscription handling
         // system. If a club discount product is included, it will be handled
         // by the subscription system at the same time.
         if (Payments.recentPaymentCompleted(order.email)) {
+          paymentReceived = true;
+
           // Save the incoming order ID with the received payment, for future
           // reference.
           Payments.update({
@@ -204,8 +207,11 @@ const RouteHandler = {
         Subscription.createCustomerDiscount(order);
       }
 
-      // Let Shopify know the order has been paid for
-      shopifyOrderApi.markOrderAsPaid(order.id, +order.total_price);
+      if (paymentReceived) {
+        // If payment was received, let Shopify know the order has been paid
+        // for. Otherwise leave the order in `pending` status.
+        shopifyOrderApi.markOrderAsPaid(order.id, +order.total_price);
+      }
     }
     res.end();
   },
