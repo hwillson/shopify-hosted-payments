@@ -1,6 +1,7 @@
 import { Meteor } from 'meteor/meteor';
 import { ValidatedMethod } from 'meteor/mdg:validated-method';
 import { SimpleSchema } from 'meteor/aldeed:simple-schema';
+import shopifyOrderApi from '../shopify/server/shopify_order_api';
 
 const updateCard = new ValidatedMethod({
   name: 'cards.update',
@@ -68,6 +69,30 @@ const updateCard = new ValidatedMethod({
         value: JSON.stringify(stripeCustomer.primaryCard),
         valueType: 'string',
       });
+
+      // If the customer has a recently failed subscription order, get the
+      // amount, charge for it in Stripe, and if successful mark the order
+      // as paid in Shopify.
+      const pendingOrder =
+        shopifyOrderApi.getCustomerPendingOrder(shopifyCustomer.id);
+      if (pendingOrder) {
+        try {
+          StripeHelper.chargeCard({
+            customerId: stripeCustomer.stripeCustomerId,
+            amount: pendingOrder.total_price * 100,
+            description:
+              `Re-trying failed charge for order ID ${pendingOrder.id} ` +
+              '(thefeed.com)',
+          });
+
+          shopifyOrderApi.markOrderAsPaid({
+            orderId: pendingOrder.id,
+            totalPrice: pendingOrder.totalPrice,
+          });
+        } catch (error) {
+          bugsnag.notify(error);
+        }
+      }
 
       if (customerMetadata.subscriptionId) {
         // Resume the subscription in MorePlease (if the last payment failed),

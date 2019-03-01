@@ -22,6 +22,31 @@ const shopifyOrderApi = {
     return orders;
   },
 
+  getCustomerPendingOrder(customerId) {
+    let pendingOrder;
+    if (customerId) {
+      const serviceUrl = Meteor.settings.private.shopifyServiceUrl;
+      const apiKey = process.env.SHOPIFY_API_KEY;
+      const apiPass = process.env.SHOPIFY_API_PASS;
+      const response = HTTP.get(
+        `${serviceUrl}/customers/${customerId}/orders.json`,
+        {
+          auth: `${apiKey}:${apiPass}`,
+          query: 'financial_status=pending&fields=id,total_price,customer',
+        }
+      );
+      if (
+        response &&
+        response.data &&
+        response.data.orders &&
+        response.data.orders.length > 0
+      ) {
+        pendingOrder = response.data.orders[0];
+      }
+    }
+    return pendingOrder;
+  },
+
   markOrderAsPaid(orderId, totalPrice) {
     if (orderId && totalPrice) {
       const serviceUrl = Meteor.settings.private.shopifyServiceUrl;
