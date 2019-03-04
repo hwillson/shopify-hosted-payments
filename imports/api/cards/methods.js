@@ -1,7 +1,6 @@
 import { Meteor } from 'meteor/meteor';
 import { ValidatedMethod } from 'meteor/mdg:validated-method';
 import { SimpleSchema } from 'meteor/aldeed:simple-schema';
-import shopifyOrderApi from '../shopify/server/shopify_order_api';
 
 const updateCard = new ValidatedMethod({
   name: 'cards.update',
@@ -73,6 +72,7 @@ const updateCard = new ValidatedMethod({
       // If the customer has a recently failed subscription order, get the
       // amount, charge for it in Stripe, and if successful mark the order
       // as paid in Shopify.
+      import shopifyOrderApi from '../shopify/server/shopify_order_api';
       const pendingOrder =
         shopifyOrderApi.getCustomerPendingOrder(shopifyCustomer.id);
       if (pendingOrder) {

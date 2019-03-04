@@ -1,3 +1,5 @@
+/* eslint-disable no-restricted-syntax */
+
 import { Meteor } from 'meteor/meteor';
 import { HTTP } from 'meteor/http';
 import R from 'ramda';
@@ -145,64 +147,66 @@ const Subscription = {
     };
     if (orderData && orderData.line_items) {
       orderData.line_items.forEach((lineItem) => {
-        if (lineItem.sku.indexOf('TF_SUB_') > -1) {
-          this._subscriptionFrequencyId =
-            lineItem.sku.replace('TF_SUB_', '').toLowerCase();
-        } else if (lineItem.sku.indexOf('TF_TRIAL_') > -1) {
-          // note_attributes format:
-          // name = TF_ONGOING_TRIAL
-          // value = TF_SPORT_SIZE (PRODUCT_ID-VARIATION_ID)
-          orderData.note_attributes.forEach((note) => {
-            if (note.name === 'TF_ONGOING_TRIAL') {
-              const matches = /^TF_.*?\((.*?)-(.*?)\)/.exec(note.value);
-              if (matches && (matches.length === 3)) {
-                const productId = matches[1];
-                const variationId = matches[2];
-                productData.products.push({
-                  productId,
-                  variationId,
-                  quantity: 1,
-                });
-                productData.includesFreeTrial = true;
-              }
-            }
-          });
-        } else {
-          // If a renewal_discount_percent value is set as a line item
-          // property, use that for the line item discount percent. Otherwise
-          // fallback on calculating the discount percent leveraging the
-          // line item's total_discount.
-          let discountPercent = 0;
-          if (lineItem.properties
-              && lineItem.properties.length > 0) {
-            lineItem.properties.forEach((property) => {
-              if (property.name
-                  && property.name === 'renewal_discount_percent') {
-                discountPercent = +property.value;
+        if (!this._isOnetimeLineItem(lineItem)) {
+          if (lineItem.sku.indexOf('TF_SUB_') > -1) {
+            this._subscriptionFrequencyId =
+              lineItem.sku.replace('TF_SUB_', '').toLowerCase();
+          } else if (lineItem.sku.indexOf('TF_TRIAL_') > -1) {
+            // note_attributes format:
+            // name = TF_ONGOING_TRIAL
+            // value = TF_SPORT_SIZE (PRODUCT_ID-VARIATION_ID)
+            orderData.note_attributes.forEach((note) => {
+              if (note.name === 'TF_ONGOING_TRIAL') {
+                const matches = /^TF_.*?\((.*?)-(.*?)\)/.exec(note.value);
+                if (matches && (matches.length === 3)) {
+                  const productId = matches[1];
+                  const variationId = matches[2];
+                  productData.products.push({
+                    productId,
+                    variationId,
+                    quantity: 1,
+                  });
+                  productData.includesFreeTrial = true;
+                }
               }
             });
-          }
-
-          if (!discountPercent) {
-            const totalDiscount = +lineItem.total_discount;
-            if (totalDiscount > 0) {
-              const totalPrice =
-                R.multiply(+lineItem.price, lineItem.quantity);
-              const totalDiscountedPrice =
-                R.subtract(totalPrice, totalDiscount);
-              discountPercent = R.subtract(
-                100,
-                R.multiply(R.divide(totalDiscountedPrice, totalPrice), 100),
-              );
+          } else {
+            // If a renewal_discount_percent value is set as a line item
+            // property, use that for the line item discount percent. Otherwise
+            // fallback on calculating the discount percent leveraging the
+            // line item's total_discount.
+            let discountPercent = 0;
+            if (lineItem.properties
+                && lineItem.properties.length > 0) {
+              lineItem.properties.forEach((property) => {
+                if (property.name
+                    && property.name === 'renewal_discount_percent') {
+                  discountPercent = +property.value;
+                }
+              });
             }
-          }
 
-          productData.products.push({
-            productId: lineItem.product_id,
-            variationId: lineItem.variant_id,
-            quantity: lineItem.quantity,
-            discountPercent,
-          });
+            if (!discountPercent) {
+              const totalDiscount = +lineItem.total_discount;
+              if (totalDiscount > 0) {
+                const totalPrice =
+                  R.multiply(+lineItem.price, lineItem.quantity);
+                const totalDiscountedPrice =
+                  R.subtract(totalPrice, totalDiscount);
+                discountPercent = R.subtract(
+                  100,
+                  R.multiply(R.divide(totalDiscountedPrice, totalPrice), 100),
+                );
+              }
+            }
+
+            productData.products.push({
+              productId: lineItem.product_id,
+              variationId: lineItem.variant_id,
+              quantity: lineItem.quantity,
+              discountPercent,
+            });
+          }
         }
       });
     }
@@ -267,6 +271,21 @@ const Subscription = {
       order.totalPrice = orderData.total_price;
     }
     return order;
+  },
+
+  _isOnetimeLineItem(lineItem) {
+    let isOnetime;
+    if (
+      lineItem &&
+      lineItem.properties &&
+      lineItem.properties.length > 0
+    ) {
+      isOnetime = lineItem.properties.filter(prop =>
+        prop.name === 'frequency' &&
+        prop.value === 'onetime'
+      ).length > 0;
+    }
+    return isOnetime;
   },
 };
 
