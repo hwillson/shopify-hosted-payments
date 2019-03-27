@@ -177,10 +177,14 @@ const RouteHandler = {
       });
 
       let payment;
-      if (subscriptionProductFound) {
-        // Create a new subscription in the external subscription handling
-        // system. If a club discount product is included, it will be handled
-        // by the subscription system at the same time.
+      if (discountClubProductFound) {
+        // If the incoming order doesn't include a subscription but does
+        // include a discount club product purchase, make sure the discount
+        // club details are sent into the subscription system, and associated
+        // with a customer (creating the customer if necessary). This will not
+        // create a full subscription.
+        Subscription.createCustomerDiscount(order);
+      } else {
         payment = Payments.recentPaymentCompleted(order.email);
         if (payment) {
           // Save the incoming order ID with the received payment, for future
@@ -196,20 +200,32 @@ const RouteHandler = {
           });
         }
 
-        Subscription.create(order);
-      } else if (discountClubProductFound) {
-        // If the incoming order doesn't include a subscription but does
-        // include a discount club product purchase, make sure the discount
-        // club details are sent into the subscription system, and associated
-        // with a customer (creating the customer if necessary). This will not
-        // create a full subscription.
-        Subscription.createCustomerDiscount(order);
+        if (subscriptionProductFound) {
+          // Create a new subscription in the external subscription handling
+          // system. If a club discount product is included, it will be handled
+          // by the subscription system at the same time.
+          Subscription.create(order);
+        }
       }
 
       if (payment) {
+        let amountPaid = 0;
+        if (
+          payment.gateway === 'spreedly' &&
+          payment.charge &&
+          payment.charge.data &&
+          payment.charge.data.transaction &&
+          payment.charge.data.transaction.succeeded
+        ) {
+          // Spreedly
+          amountPaid = payment.charge.data.transaction.amount;
+        } else {
+          // Stripe
+          amountPaid = payment.charge.amount;
+        }
         // If payment was received, let Shopify know the order has been paid
         // for. Otherwise leave the order in `pending` status.
-        shopifyOrderApi.markOrderAsPaid(order.id, payment.charge.amount / 100);
+        shopifyOrderApi.markOrderAsPaid(order.id, amountPaid / 100);
       }
     }
     res.end();
@@ -506,7 +522,11 @@ const RouteHandler = {
 
         const usingApplePay =
           (tokenData && tokenData.paymentMethod === 'apple-pay');
-        if (!payment.stripe_customer_id && !usingApplePay) {
+        if (
+          !payment.stripe_customer_id &&
+          !usingApplePay &&
+          payment.gateway !== 'spreedly'
+        ) {
           // - Don't send stripe card details back to Shopify for charges
           // placed with an existing Stripe customer ID (since they
           // already have a card in Shopify)
@@ -514,6 +534,8 @@ const RouteHandler = {
           // Apple Pay card details can be retrieved using Apple Pay again
           // at checkout
           ShopifyCustomerApi.updateStripeMetafield({ payment, charge });
+        } else if (payment.gateway === 'spreedly') {
+          ShopifyCustomerApi.updateSpreedlyMetafield({ payment, charge });
         }
 
         success = true;

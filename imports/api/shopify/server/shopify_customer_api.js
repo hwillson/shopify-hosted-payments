@@ -98,6 +98,35 @@ const ShopifyCustomerApi = {
     }
   },
 
+  updateSpreedlyMetafield({ payment, charge }) {
+    if (
+      payment &&
+      charge &&
+      charge.data &&
+      charge.data.transaction &&
+      charge.data.transaction.payment_method
+    ) {
+      const { email } = payment;
+      const customer = this.findCustomer(email);
+      if (customer) {
+        const paymentMethod = charge.data.transaction.payment_method;
+        this.updateMetafield({
+          customerId: customer.id,
+          namespace: 'spreedly',
+          key: 'customer',
+          value: JSON.stringify({
+            paymentMethodToken: paymentMethod.token,
+            cardType: paymentMethod.card_type,
+            cardExpYear: paymentMethod.year,
+            cardExpMonth: paymentMethod.month,
+            cardLast4: paymentMethod.last_four_digits,
+          }),
+          valueType: 'string',
+        });
+      }
+    }
+  },
+
   getCustomerMetadata(shopifyCustomerId) {
     const customerMetadata = {};
     if (shopifyCustomerId) {

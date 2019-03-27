@@ -2,11 +2,12 @@ import { Mongo } from 'meteor/mongo';
 
 import CustomerSchema from './schema';
 import StripeHelper from '../cards/server/stripe_helper';
+import { chargeSpreedlyCustomer } from '../cards/server/spreedly-helper';
 
 const CustomersCollection = new Mongo.Collection('customers');
 CustomersCollection.attachSchema(CustomerSchema);
 
-CustomersCollection.chargeCustomer = (payment) => {
+function chargeCustomerViaStripe(payment) {
   let charge;
   if (payment) {
     let stripeCustomerId;
@@ -70,7 +71,17 @@ CustomersCollection.chargeCustomer = (payment) => {
     });
   }
   return charge;
-};
+}
+
+function chargeCustomerViaSpreedly(payment) {
+  return chargeSpreedlyCustomer(payment);
+}
+
+CustomersCollection.chargeCustomer = payment => (
+  payment.gateway === 'spreedly'
+    ? chargeCustomerViaSpreedly(payment)
+    : chargeCustomerViaStripe(payment)
+);
 
 CustomersCollection.deny({
   insert() { return true; },

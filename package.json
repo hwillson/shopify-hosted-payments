@@ -78,7 +78,8 @@
       "react/no-find-dom-node": "off",
       "react/forbid-prop-types": "off",
       "global-require": "off",
-      "no-underscore-dangle": "off"
+      "no-underscore-dangle": "off",
+      "import/prefer-default-export": "off"
     },
     "settings": {
       "import/resolver": "meteor"
