@@ -16,6 +16,8 @@ import hubspot from '../../api/hubspot/server/hubspot';
 import tokensCollection from '../../api/tokens/collection';
 import bugsnag from '../../api/bugsnag/server/bugsnag';
 
+const pendingTransactions = {};
+
 const RouteHandler = {
   // Verify the incoming shopify request is valid, save the incoming payment
   // details, then redirect to the application root to display payment
@@ -132,7 +134,16 @@ const RouteHandler = {
           statusCode = 200;
           paymentResponse.success = true;
           paymentResponse.message = 'Card already charged; not charged again.';
+        } else if (pendingTransactions[payment.checkout_token]) {
+          // This is a second duplicate transaction safeguard, in-case the
+          // first one fails. Each Shopify checkout has a unique ID, which
+          // we track in a map to prevent duplicate purchases for the same
+          // checkout.
+          paymentResponse.success = false;
+          paymentResponse.message = 'Duplicate transaction.';
         } else {
+          // Charge the customer.
+          pendingTransactions[payment.checkout_token] = true;
           const paymentId = Payments.insert(payment);
           if (this._chargeCustomer(paymentId, payment)) {
             statusCode = 200;
@@ -151,6 +162,10 @@ const RouteHandler = {
     } else {
       paymentResponse.success = false;
       paymentResponse.message = 'Missing payment details.';
+    }
+
+    if (payment && payment.checkout_token) {
+      delete pendingTransactions[payment.checkout_token];
     }
 
     const response = res;
