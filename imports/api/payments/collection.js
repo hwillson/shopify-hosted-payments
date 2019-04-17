@@ -13,13 +13,20 @@ Payments.refund = (orderId) => {
   }
 };
 
-Payments.recentPaymentCompleted = email => Payments.findOne({
-  email,
-  status: 'completed',
-  timestamp: {
-    $gte: moment().subtract(10, 'minutes').toDate(),
-  },
-});
+Payments.recentPaymentCompleted = (email) => {
+  const recentPayments = Payments.find({
+    email,
+    status: 'completed',
+    timestamp: {
+      $gte: moment().subtract(10, 'minutes').toDate(),
+    },
+  }, {
+    sort: {
+      timestamp: -1,
+    },
+  }).fetch();
+  return recentPayments ? recentPayments[0] : null;
+};
 
 Payments.deny({
   insert() { return true; },
