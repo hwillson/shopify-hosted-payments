@@ -343,7 +343,7 @@ const RouteHandler = {
         // system, in-case it has been changed.
         Subscription.updateCustomer({
           externalId: cardDetails.shopifyCustomerId,
-          stripeCustomerId: cardDetails.customerId,
+          stripeCustomerId: customer.primaryCard.stripeCustomerId,
         });
 
         statusCode = 200;
