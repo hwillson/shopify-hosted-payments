@@ -213,7 +213,6 @@ const Subscription = {
           `will not be created. ${JSON.stringify(orderData)}`
         );
         bugsnag.notify(error, { customer });
-        throw error;
       }
     }
     return customer;
