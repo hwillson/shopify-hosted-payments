@@ -210,7 +210,7 @@ const Subscription = {
       if (!customer.stripeCustomerId) {
         const error = new Error(
           'Problem getting customer ID from Stripe; subscription ' +
-          'will not be created.'
+          `will not be created. ${JSON.stringify(orderData)}`
         );
         bugsnag.notify(error, { customer });
         throw error;
