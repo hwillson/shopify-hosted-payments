@@ -13,6 +13,7 @@ import StripeHelper from '../../api/cards/server/stripe_helper';
 import loyaltyLion from '../../api/loyaltylion/server/loyaltylion';
 import klaviyo from '../../api/klaviyo/server/klaviyo';
 import hubspot from '../../api/hubspot/server/hubspot';
+import { recordDripEvent } from '../../api/drip/server/drip';
 import tokensCollection from '../../api/tokens/collection';
 import bugsnag from '../../api/bugsnag/server/bugsnag';
 
@@ -31,12 +32,12 @@ const RouteHandler = {
       // show the Stripe checkout form
       const paymentId = Payments.insert(shopifyRequest.request);
       res.writeHead(302, {
-        Location: `/?id=${paymentId}`,
+        Location: `/?id=${paymentId}`
       });
     } else {
       // Invalid signature; redirect to shopify
       res.writeHead(302, {
-        Location: shopifyRequest.request.x_url_cancel,
+        Location: shopifyRequest.request.x_url_cancel
       });
     }
 
@@ -67,12 +68,12 @@ const RouteHandler = {
 
     if (shopifyResponse) {
       res.writeHead(302, {
-        Location: `${payment.x_url_complete}?${shopifyResponse.queryString()}`,
+        Location: `${payment.x_url_complete}?${shopifyResponse.queryString()}`
       });
     } else {
       const failedUrl = payment.x_url_complete.replace(
         '/offsite_gateway_callback',
-        '?step=payment_method&failed=1',
+        '?step=payment_method&failed=1'
       );
       res.writeHead(302, { Location: failedUrl });
     }
@@ -117,8 +118,12 @@ const RouteHandler = {
     const payment = req.body;
     let statusCode = 400;
     const paymentResponse = {};
-    if (payment && payment.email && payment.stripe_token
-        && payment.total_price) {
+    if (
+      payment &&
+      payment.email &&
+      payment.stripe_token &&
+      payment.total_price
+    ) {
       try {
         payment.timestamp = new Date();
 
@@ -126,11 +131,14 @@ const RouteHandler = {
         // If so, skip this payment. This is a safeguard to make sure a double
         // submit for the exact same order isn't processed and billed for
         // twice.
-        if (payment.checkout_token && Payments.findOne({
-          email: payment.email,
-          total_price: payment.total_price,
-          checkout_token: payment.checkout_token,
-        })) {
+        if (
+          payment.checkout_token &&
+          Payments.findOne({
+            email: payment.email,
+            total_price: payment.total_price,
+            checkout_token: payment.checkout_token
+          })
+        ) {
           statusCode = 200;
           paymentResponse.success = true;
           paymentResponse.message = 'Card already charged; not charged again.';
@@ -182,7 +190,7 @@ const RouteHandler = {
       let subscriptionProductFound = false;
       let discountClubProductFound = false;
       const lineItems = order.line_items;
-      lineItems.forEach((lineItem) => {
+      lineItems.forEach(lineItem => {
         if (lineItem.sku.startsWith('TF_SUB')) {
           subscriptionProductFound = true;
         }
@@ -204,15 +212,18 @@ const RouteHandler = {
         if (payment) {
           // Save the incoming order ID with the received payment, for future
           // reference.
-          Payments.update({
-            email: order.email,
-            order_id: { $exists: false },
-            status: 'completed',
-          }, {
-            $set: {
-              order_id: order.id,
+          Payments.update(
+            {
+              email: order.email,
+              order_id: { $exists: false },
+              status: 'completed'
             },
-          });
+            {
+              $set: {
+                order_id: order.id
+              }
+            }
+          );
         }
 
         if (subscriptionProductFound) {
@@ -255,14 +266,15 @@ const RouteHandler = {
     const failureRedirect = () => {
       const failedUrl = payment.x_url_complete.replace(
         '/offsite_gateway_callback',
-        '?step=payment_method&failed=1',
+        '?step=payment_method&failed=1'
       );
       res.writeHead(302, { Location: failedUrl });
     };
 
     // First try to find the customers previously saved stripe token
-    const tokenData =
-      tokensCollection.findOne({ email: payment.x_customer_email });
+    const tokenData = tokensCollection.findOne({
+      email: payment.x_customer_email
+    });
     if (tokenData && tokenData.token) {
       // Token found, so we're processing a new credit card purchase
       payment.stripe_token = tokenData.token;
@@ -270,8 +282,9 @@ const RouteHandler = {
       // If no previously saved token, then see if a matching customer can
       // be found with a saved stripe customer ID (this means we're processing
       // a payment with a saved credit card).
-      const customer =
-        CustomersCollection.findOne({ email: payment.x_customer_email });
+      const customer = CustomersCollection.findOne({
+        email: payment.x_customer_email
+      });
       if (customer && customer.stripeCustomerId) {
         payment.stripe_customer_id = customer.stripeCustomerId;
       }
@@ -297,7 +310,7 @@ const RouteHandler = {
 
       if (shopifyResponse) {
         res.writeHead(302, {
-          Location: `${payment.x_url_complete}?${shopifyResponse.queryString()}`,
+          Location: `${payment.x_url_complete}?${shopifyResponse.queryString()}`
         });
       } else {
         failureRedirect();
@@ -327,7 +340,7 @@ const RouteHandler = {
       try {
         const customer = StripeHelper.updateCard({
           customerId: cardDetails.customerId,
-          tokenId: cardDetails.tokenId,
+          tokenId: cardDetails.tokenId
         });
 
         // Send new card details back to Shopify
@@ -336,14 +349,14 @@ const RouteHandler = {
           namespace: 'stripe',
           key: 'customer',
           value: JSON.stringify(customer.primaryCard),
-          valueType: 'string',
+          valueType: 'string'
         });
 
         // Send the returned Stripe Customer ID back into the subscription
         // system, in-case it has been changed.
         Subscription.updateCustomer({
           externalId: cardDetails.shopifyCustomerId,
-          stripeCustomerId: customer.primaryCard.stripeCustomerId,
+          stripeCustomerId: customer.primaryCard.stripeCustomerId
         });
 
         statusCode = 200;
@@ -373,14 +386,14 @@ const RouteHandler = {
     let statusCode = 400;
     const chargeResponse = {
       success: false,
-      message: 'Missing charge details.',
+      message: 'Missing charge details.'
     };
     if (chargeDetails) {
       try {
         const charge = StripeHelper.chargeCard({
           customerId: chargeDetails.stripeCustomerId,
           amount: chargeDetails.amount,
-          description: chargeDetails.description,
+          description: chargeDetails.description
         });
         if (charge) {
           statusCode = 200;
@@ -404,7 +417,7 @@ const RouteHandler = {
     let statusCode = 400;
     const customerResponse = {
       message: null,
-      customer: null,
+      customer: null
     };
     if (params && params.query && params.query.email) {
       const customer = ShopifyCustomerApi.findCustomer(params.query.email);
@@ -442,6 +455,7 @@ const RouteHandler = {
     const reqData = req.body;
     if (reqData && reqData.data) {
       const eventData = JSON.parse(reqData.data);
+      recordDripEvent(eventData);
       klaviyo.trackEvent(eventData);
       hubspot.trackEvent(eventData);
       switch (eventData.event) {
@@ -481,16 +495,22 @@ const RouteHandler = {
     const customerDetails = req.body;
     let statusCode = 400;
     const updateResponse = {};
-    if (customerDetails && customerDetails.email
-        && customerDetails.stripeCustomerId) {
+    if (
+      customerDetails &&
+      customerDetails.email &&
+      customerDetails.stripeCustomerId
+    ) {
       try {
-        CustomersCollection.upsert({
-          email: customerDetails.email,
-        }, {
-          $set: {
-            stripeCustomerId: customerDetails.stripeCustomerId,
+        CustomersCollection.upsert(
+          {
+            email: customerDetails.email
           },
-        });
+          {
+            $set: {
+              stripeCustomerId: customerDetails.stripeCustomerId
+            }
+          }
+        );
         statusCode = 200;
         updateResponse.success = true;
         updateResponse.message = 'Customer updated';
@@ -536,7 +556,7 @@ const RouteHandler = {
         );
 
         const usingApplePay =
-          (tokenData && tokenData.paymentMethod === 'apple-pay');
+          tokenData && tokenData.paymentMethod === 'apple-pay';
         if (
           !payment.stripe_customer_id &&
           !usingApplePay &&
@@ -566,70 +586,58 @@ const RouteHandler = {
       }
     }
     return success;
-  },
+  }
 };
 
 Picker.middleware(bodyParser.json());
 Picker.middleware(bodyParser.urlencoded({ extended: false }));
 
-Picker.route(
-  '/incoming-payment',
-  (params, req, res) => RouteHandler.incomingPayment(params, req, res)
+Picker.route('/incoming-payment', (params, req, res) =>
+  RouteHandler.incomingPayment(params, req, res)
 );
 
-Picker.route(
-  '/incoming-payment-with-token',
-  (params, req, res) => RouteHandler.incomingPaymentWithToken(params, req, res)
+Picker.route('/incoming-payment-with-token', (params, req, res) =>
+  RouteHandler.incomingPaymentWithToken(params, req, res)
 );
 
-Picker.route(
-  '/save-token',
-  (params, req, res) => RouteHandler.saveToken(params, req, res),
+Picker.route('/save-token', (params, req, res) =>
+  RouteHandler.saveToken(params, req, res)
 );
 
-Picker.route(
-  '/incoming-payment-without-token',
-  (params, req, res) => RouteHandler.incomingPaymentWithoutToken(params, req, res)
+Picker.route('/incoming-payment-without-token', (params, req, res) =>
+  RouteHandler.incomingPaymentWithoutToken(params, req, res)
 );
 
-Picker.route(
-  '/subscription-purchase',
-  (params, req, res) => RouteHandler.subscriptionPurchase(params, req, res)
+Picker.route('/subscription-purchase', (params, req, res) =>
+  RouteHandler.subscriptionPurchase(params, req, res)
 );
 
-Picker.route(
-  '/create-subscription',
-  (params, req, res) => RouteHandler.createSubscription(params, req, res)
+Picker.route('/create-subscription', (params, req, res) =>
+  RouteHandler.createSubscription(params, req, res)
 );
 
-Picker.route(
-  '/update-card',
-  (params, req, res) => RouteHandler.updateCard(params, req, res)
+Picker.route('/update-card', (params, req, res) =>
+  RouteHandler.updateCard(params, req, res)
 );
 
-Picker.route(
-  '/charge-card',
-  (params, req, res) => RouteHandler.chargeCard(params, req, res)
+Picker.route('/charge-card', (params, req, res) =>
+  RouteHandler.chargeCard(params, req, res)
 );
 
-Picker.route(
-  '/customer-activation-details',
-  (params, req, res) => RouteHandler.customerActivationDetails(params, req, res)
+Picker.route('/customer-activation-details', (params, req, res) =>
+  RouteHandler.customerActivationDetails(params, req, res)
 );
 
-Picker.route(
-  '/order-cancelled',
-  (params, req, res) => RouteHandler.orderCancelled(params, req, res)
+Picker.route('/order-cancelled', (params, req, res) =>
+  RouteHandler.orderCancelled(params, req, res)
 );
 
-Picker.route(
-  '/subscription-event',
-  (params, req, res) => RouteHandler.subscriptionEvent(params, req, res),
+Picker.route('/subscription-event', (params, req, res) =>
+  RouteHandler.subscriptionEvent(params, req, res)
 );
 
-Picker.route(
-  '/update-customer',
-  (params, req, res) => RouteHandler.updateCustomer(params, req, res),
+Picker.route('/update-customer', (params, req, res) =>
+  RouteHandler.updateCustomer(params, req, res)
 );
 
 export default RouteHandler;
