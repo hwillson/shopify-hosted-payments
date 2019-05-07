@@ -3,7 +3,7 @@ const dripClient = require('drip-nodejs')({
   accountId: process.env.DRIP_ACCOUNT_ID
 });
 
-export async function recordDripEvent(eventData) {
+export function recordDripEvent(eventData) {
   const { extra } = eventData;
   const payload = {
     email: extra.customerEmail,
@@ -13,6 +13,22 @@ export async function recordDripEvent(eventData) {
   try {
     dripClient.recordEvent({
       events: [payload]
+    });
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+export function updateDripSubscriber(eventData) {
+  const { extra } = eventData;
+  delete extra.subscriptionItems;
+  const payload = {
+    email: extra.customerEmail,
+    custom_fields: extra
+  };
+  try {
+    dripClient.createUpdateSubscriber({
+      subscribers: [payload]
     });
   } catch (error) {
     console.log(error);

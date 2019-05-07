@@ -13,7 +13,7 @@ import StripeHelper from '../../api/cards/server/stripe_helper';
 import loyaltyLion from '../../api/loyaltylion/server/loyaltylion';
 import klaviyo from '../../api/klaviyo/server/klaviyo';
 import hubspot from '../../api/hubspot/server/hubspot';
-import { recordDripEvent } from '../../api/drip/server/drip';
+import { recordDripEvent, updateDripSubscriber } from '../../api/drip/server/drip';
 import tokensCollection from '../../api/tokens/collection';
 import bugsnag from '../../api/bugsnag/server/bugsnag';
 
@@ -456,6 +456,7 @@ const RouteHandler = {
     if (reqData && reqData.data) {
       const eventData = JSON.parse(reqData.data);
       recordDripEvent(eventData);
+      updateDripSubscriber(eventData);
       klaviyo.trackEvent(eventData);
       hubspot.trackEvent(eventData);
       switch (eventData.event) {
