@@ -8,22 +8,24 @@ const StripeHelper = {
     let customer;
     if (customerId && tokenId) {
       const stripe = require('stripe')(StripeKeys.secret);
-      const stripeCustomersUpdateSync =
-        Meteor.wrapAsync(stripe.customers.update, stripe.customers);
+      const stripeCustomersUpdateSync = Meteor.wrapAsync(
+        stripe.customers.update,
+        stripe.customers
+      );
       customer = stripeCustomersUpdateSync(customerId, {
-        source: tokenId,
+        source: tokenId
       });
 
       if (customer) {
-        const defaultCard = customer.sources.data.filter(card =>
-          card.id === customer.default_source
+        const defaultCard = customer.sources.data.filter(
+          card => card.id === customer.default_source
         )[0];
         customer.primaryCard = {
           stripeCustomerId: customer.id,
           cardType: defaultCard.brand,
           cardExpYear: defaultCard.exp_year,
           cardExpMonth: defaultCard.exp_month,
-          cardLast4: defaultCard.last4,
+          cardLast4: defaultCard.last4
         };
       }
     }
@@ -34,13 +36,15 @@ const StripeHelper = {
     let charge;
     if (customerId && amount) {
       const stripe = require('stripe')(StripeKeys.secret);
-      const stripeChargesCreateSync =
-        Meteor.wrapAsync(stripe.charges.create, stripe.charges);
+      const stripeChargesCreateSync = Meteor.wrapAsync(
+        stripe.charges.create,
+        stripe.charges
+      );
       charge = stripeChargesCreateSync({
         customer: customerId,
         amount: parseInt(amount, 10),
         currency: 'usd',
-        description,
+        description
       });
     }
     return charge;
@@ -48,77 +52,55 @@ const StripeHelper = {
 
   createCustomer({ email, tokenId }) {
     let stripeCustomer;
-
-    // First see if a matching customer already exists
-    const customerId = this.findCustomerId(email);
-    if (customerId) {
-      stripeCustomer = this.updateCard({ customerId, tokenId });
-    } else {
-      // Otherwise create a new customer
-      const stripe = require('stripe')(StripeKeys.secret);
-      const stripeCustomersCreateSync =
-        Meteor.wrapAsync(stripe.customers.create, stripe.customers);
-      stripeCustomer = stripeCustomersCreateSync({
-        email,
-        source: tokenId,
-      });
-    }
+    const stripe = require('stripe')(StripeKeys.secret);
+    const stripeCustomersCreateSync = Meteor.wrapAsync(
+      stripe.customers.create,
+      stripe.customers
+    );
+    stripeCustomer = stripeCustomersCreateSync({
+      email,
+      source: tokenId
+    });
     return stripeCustomer;
   },
 
   createCustomerWithCard({ email, tokenId }) {
     const stripe = require('stripe')(StripeKeys.secret);
-    const stripeCustomersCreateSync =
-      Meteor.wrapAsync(stripe.customers.create, stripe.customers);
+    const stripeCustomersCreateSync = Meteor.wrapAsync(
+      stripe.customers.create,
+      stripe.customers
+    );
     const stripeCustomer = stripeCustomersCreateSync({
       email,
-      source: tokenId,
+      source: tokenId
     });
     if (stripeCustomer) {
-      const defaultCard = stripeCustomer.sources.data.filter(card =>
-        card.id === stripeCustomer.default_source
+      const defaultCard = stripeCustomer.sources.data.filter(
+        card => card.id === stripeCustomer.default_source
       )[0];
       stripeCustomer.primaryCard = {
         stripeCustomerId: stripeCustomer.id,
         cardType: defaultCard.brand,
         cardExpYear: defaultCard.exp_year,
         cardExpMonth: defaultCard.exp_month,
-        cardLast4: defaultCard.last4,
+        cardLast4: defaultCard.last4
       };
     }
     return stripeCustomer;
   },
 
-  findCustomerId(email) {
-    let stripeCustomerId;
-    if (email) {
-      const response = HTTP.get('https://api.stripe.com/v1/search', {
-        params: {
-          query: email,
-          type: 'customers',
-          count: 1,
-        },
-        headers: {
-          authorization: `Bearer ${StripeKeys.secret}`,
-        },
-      });
-      if (response.data && response.data.data.length > 0) {
-        stripeCustomerId = response.data.data[0].id;
-      }
-    }
-    return stripeCustomerId;
-  },
-
   refundCharge(chargeId) {
     if (chargeId) {
       const stripe = require('stripe')(StripeKeys.secret);
-      const stripeRefundsCreateSync =
-        Meteor.wrapAsync(stripe.refunds.create, stripe.refunds);
+      const stripeRefundsCreateSync = Meteor.wrapAsync(
+        stripe.refunds.create,
+        stripe.refunds
+      );
       stripeRefundsCreateSync({
-        charge: chargeId,
+        charge: chargeId
       });
     }
-  },
+  }
 };
 
 export default StripeHelper;

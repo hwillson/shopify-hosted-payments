@@ -6,7 +6,7 @@ const updateCard = new ValidatedMethod({
   name: 'cards.update',
   validate: new SimpleSchema({
     tokenId: { type: String },
-    email: { type: String },
+    email: { type: String }
   }).validator(),
   run({ tokenId, email }) {
     if (!this.isSimulation) {
@@ -19,26 +19,26 @@ const updateCard = new ValidatedMethod({
       if (!shopifyCustomer) {
         const error = new Meteor.Error(
           "Credit card update: Can't find matching Shopify customer " +
-          `record with email ${email}`
+            `record with email ${email}`
         );
         bugsnag.notify(error);
         throw error;
       }
 
       // Find the customer's Stripe ID
-      const customerMetadata =
-        ShopifyCustomerApi.getCustomerMetadata(shopifyCustomer.id);
+      const customerMetadata = ShopifyCustomerApi.getCustomerMetadata(
+        shopifyCustomer.id
+      );
       let customerStripeId;
 
       import StripeHelper from './server/stripe_helper';
 
-      if (customerMetadata && customerMetadata.stripe
-          && customerMetadata.stripe.stripeCustomerId) {
+      if (
+        customerMetadata &&
+        customerMetadata.stripe &&
+        customerMetadata.stripe.stripeCustomerId
+      ) {
         customerStripeId = customerMetadata.stripe.stripeCustomerId;
-      } else {
-        // If the customers Stripe ID can't be pulled from Shopify, try to
-        // get it from Stripe.
-        customerStripeId = StripeHelper.findCustomerId(email);
       }
 
       let stripeCustomer;
@@ -46,16 +46,19 @@ const updateCard = new ValidatedMethod({
         // Update the customers credit card
         stripeCustomer = StripeHelper.updateCard({
           customerId: customerStripeId,
-          tokenId,
+          tokenId
         });
       } else {
         // If a matching customer can't be found in Stripe, create a new
         // account, and add the credit card to that account.
-        stripeCustomer = StripeHelper.createCustomerWithCard({ email, tokenId });
+        stripeCustomer = StripeHelper.createCustomerWithCard({
+          email,
+          tokenId
+        });
         const error = new Error(
           "Credit card update: Couldn't find a matching customer in " +
-          'Stripe, so created a new customer account in Stripe and ' +
-          'updated the credit card on that account. '
+            'Stripe, so created a new customer account in Stripe and ' +
+            'updated the credit card on that account. '
         );
         bugsnag.notify(error, { stripeCustomer });
       }
@@ -66,15 +69,16 @@ const updateCard = new ValidatedMethod({
         namespace: 'stripe',
         key: 'customer',
         value: JSON.stringify(stripeCustomer.primaryCard),
-        valueType: 'string',
+        valueType: 'string'
       });
 
       // If the customer has a recently failed subscription order, get the
       // amount, charge for it in Stripe, and if successful mark the order
       // as paid in Shopify.
       import shopifyOrderApi from '../shopify/server/shopify_order_api';
-      const pendingOrder =
-        shopifyOrderApi.getCustomerPendingOrder(shopifyCustomer.id);
+      const pendingOrder = shopifyOrderApi.getCustomerPendingOrder(
+        shopifyCustomer.id
+      );
       if (pendingOrder) {
         try {
           StripeHelper.chargeCard({
@@ -82,12 +86,12 @@ const updateCard = new ValidatedMethod({
             amount: pendingOrder.total_price * 100,
             description:
               `Re-trying failed charge for order ID ${pendingOrder.id} ` +
-              '(thefeed.com)',
+              '(thefeed.com)'
           });
 
           shopifyOrderApi.markOrderAsPaid({
             orderId: pendingOrder.id,
-            totalPrice: pendingOrder.totalPrice,
+            totalPrice: pendingOrder.totalPrice
           });
         } catch (error) {
           bugsnag.notify(error);
@@ -101,7 +105,7 @@ const updateCard = new ValidatedMethod({
         Subscription.resume(customerMetadata.subscriptionId);
       }
     }
-  },
+  }
 });
 
 export default updateCard;

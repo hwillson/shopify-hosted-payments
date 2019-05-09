@@ -15,19 +15,23 @@ const Subscription = {
     if (orderData) {
       const subscriptionData = this._prepareSubscription(orderData);
       const subServiceUrl =
-        `${Meteor.settings.private.subscriptions.serviceUrl}`
-        + '/subscriptions';
-      HTTP.post(subServiceUrl, {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${BEARER}`,
+        `${Meteor.settings.private.subscriptions.serviceUrl}` +
+        '/subscriptions';
+      HTTP.post(
+        subServiceUrl,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${BEARER}`
+          },
+          data: subscriptionData
         },
-        data: subscriptionData,
-      }, (error) => {
-        if (error) {
-          throw error;
+        error => {
+          if (error) {
+            throw error;
+          }
         }
-      });
+      );
     }
   },
 
@@ -35,39 +39,43 @@ const Subscription = {
     if (orderData) {
       const data = {
         customer: this._prepareCustomer(orderData),
-        customerDiscount: this._prepareCustomerDiscount(orderData),
+        customerDiscount: this._prepareCustomerDiscount(orderData)
       };
       const subServiceUrl =
-        `${Meteor.settings.private.subscriptions.serviceUrl}`
-        + '/customer_discounts';
-      HTTP.post(subServiceUrl, {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${BEARER}`,
+        `${Meteor.settings.private.subscriptions.serviceUrl}` +
+        '/customer_discounts';
+      HTTP.post(
+        subServiceUrl,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${BEARER}`
+          },
+          data
         },
-        data,
-      }, (error) => {
-        if (error) {
-          throw error;
+        error => {
+          if (error) {
+            throw error;
+          }
         }
-      });
+      );
     }
   },
 
   resume(subscriptionId) {
     if (subscriptionId) {
       const subServiceUrl =
-        `${Meteor.settings.private.subscriptions.serviceUrl}`
-        + `/subscriptions/${subscriptionId}/renew`;
+        `${Meteor.settings.private.subscriptions.serviceUrl}` +
+        `/subscriptions/${subscriptionId}/renew`;
       HTTP.put(
         subServiceUrl,
         {
           headers: {
             'Content-Type': 'application/json',
-            authorization: `Bearer ${BEARER}`,
-          },
+            authorization: `Bearer ${BEARER}`
+          }
         },
-        (error) => {
+        error => {
           if (error) {
             throw error;
           }
@@ -79,19 +87,23 @@ const Subscription = {
   updateCustomer(customer) {
     if (customer) {
       const subServiceUrl =
-        `${Meteor.settings.private.subscriptions.serviceUrl}`
-        + `/customers/${customer.externalId}`;
-      HTTP.put(subServiceUrl, {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${BEARER}`,
+        `${Meteor.settings.private.subscriptions.serviceUrl}` +
+        `/customers/${customer.externalId}`;
+      HTTP.put(
+        subServiceUrl,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${BEARER}`
+          },
+          data: customer
         },
-        data: customer,
-      }, (error) => {
-        if (error) {
-          throw error;
+        error => {
+          if (error) {
+            throw error;
+          }
         }
-      });
+      );
     }
   },
 
@@ -112,12 +124,12 @@ const Subscription = {
         renewalFrequencyId: this._subscriptionFrequencyId,
         shippingMethodId: shippingMethod.shippingMethodId,
         shippingMethodName: shippingMethod.shippingMethodName,
-        shippingCost: shippingMethod.shippingCost,
+        shippingCost: shippingMethod.shippingCost
       },
       customer,
       customerDiscount,
       order,
-      subscriptionItems: productData.products,
+      subscriptionItems: productData.products
     };
 
     return subscriptionData;
@@ -143,28 +155,29 @@ const Subscription = {
   _prepareProducts(orderData) {
     const productData = {
       products: [],
-      includesFreeTrial: false,
+      includesFreeTrial: false
     };
     if (orderData && orderData.line_items) {
-      orderData.line_items.forEach((lineItem) => {
+      orderData.line_items.forEach(lineItem => {
         if (!this._isOnetimeLineItem(lineItem)) {
           if (lineItem.sku.indexOf('TF_SUB_') > -1) {
-            this._subscriptionFrequencyId =
-              lineItem.sku.replace('TF_SUB_', '').toLowerCase();
+            this._subscriptionFrequencyId = lineItem.sku
+              .replace('TF_SUB_', '')
+              .toLowerCase();
           } else if (lineItem.sku.indexOf('TF_TRIAL_') > -1) {
             // note_attributes format:
             // name = TF_ONGOING_TRIAL
             // value = TF_SPORT_SIZE (PRODUCT_ID-VARIATION_ID)
-            orderData.note_attributes.forEach((note) => {
+            orderData.note_attributes.forEach(note => {
               if (note.name === 'TF_ONGOING_TRIAL') {
                 const matches = /^TF_.*?\((.*?)-(.*?)\)/.exec(note.value);
-                if (matches && (matches.length === 3)) {
+                if (matches && matches.length === 3) {
                   const productId = matches[1];
                   const variationId = matches[2];
                   productData.products.push({
                     productId,
                     variationId,
-                    quantity: 1,
+                    quantity: 1
                   });
                   productData.includesFreeTrial = true;
                 }
@@ -174,7 +187,7 @@ const Subscription = {
             productData.products.push({
               productId: lineItem.product_id,
               variationId: lineItem.variant_id,
-              quantity: lineItem.quantity,
+              quantity: lineItem.quantity
             });
           }
         }
@@ -192,25 +205,23 @@ const Subscription = {
       customer.lastName = orderData.customer.last_name;
 
       try {
-        const savedCustomer =
-          CustomersCollection.findOne({ email: customer.email });
+        const savedCustomer = CustomersCollection.findOne({
+          email: customer.email
+        });
         if (savedCustomer && savedCustomer.stripeCustomerId) {
           customer.stripeCustomerId = savedCustomer.stripeCustomerId;
-        } else {
-          customer.stripeCustomerId =
-            StripeHelper.findCustomerId(customer.email);
         }
       } catch (error) {
         bugsnag.notify(error, {
           message: 'Problem getting customer ID from Stripe',
-          customer,
+          customer
         });
       }
 
       if (!customer.stripeCustomerId) {
         const error = new Error(
           'Problem getting customer ID from Stripe; subscription ' +
-          `will not be created. ${JSON.stringify(orderData)}`
+            `will not be created. ${JSON.stringify(orderData)}`
         );
         bugsnag.notify(error, { customer });
       }
@@ -220,9 +231,11 @@ const Subscription = {
 
   _prepareShippingMethod(orderData) {
     const shippingMethod = {};
-    if (orderData
-        && orderData.shipping_lines
-        && orderData.shipping_lines.length > 0) {
+    if (
+      orderData &&
+      orderData.shipping_lines &&
+      orderData.shipping_lines.length > 0
+    ) {
       const shippingLine = orderData.shipping_lines[0];
       shippingMethod.shippingMethodId = shippingLine.id;
       shippingMethod.shippingMethodName = shippingLine.title;
@@ -244,18 +257,14 @@ const Subscription = {
 
   _isOnetimeLineItem(lineItem) {
     let isOnetime;
-    if (
-      lineItem &&
-      lineItem.properties &&
-      lineItem.properties.length > 0
-    ) {
-      isOnetime = lineItem.properties.filter(prop =>
-        prop.name === 'frequency' &&
-        prop.value === 'onetime'
-      ).length > 0;
+    if (lineItem && lineItem.properties && lineItem.properties.length > 0) {
+      isOnetime =
+        lineItem.properties.filter(
+          prop => prop.name === 'frequency' && prop.value === 'onetime'
+        ).length > 0;
     }
     return isOnetime;
-  },
+  }
 };
 
 export default Subscription;
