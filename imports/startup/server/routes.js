@@ -13,7 +13,10 @@ import StripeHelper from '../../api/cards/server/stripe_helper';
 import loyaltyLion from '../../api/loyaltylion/server/loyaltylion';
 import klaviyo from '../../api/klaviyo/server/klaviyo';
 import hubspot from '../../api/hubspot/server/hubspot';
-import { recordDripEvent, updateDripSubscriber } from '../../api/drip/server/drip';
+import {
+  recordDripEvent,
+  updateDripSubscriber
+} from '../../api/drip/server/drip';
 import tokensCollection from '../../api/tokens/collection';
 import bugsnag from '../../api/bugsnag/server/bugsnag';
 
@@ -191,10 +194,10 @@ const RouteHandler = {
       let discountClubProductFound = false;
       const lineItems = order.line_items;
       lineItems.forEach(lineItem => {
-        if (lineItem.sku.startsWith('TF_SUB')) {
+        if (lineItem.sku && lineItem.sku.startsWith('TF_SUB')) {
           subscriptionProductFound = true;
         }
-        if (lineItem.sku.startsWith('TF_CLUB')) {
+        if (lineItem.sku && lineItem.sku.startsWith('TF_CLUB')) {
           discountClubProductFound = true;
         }
       });
