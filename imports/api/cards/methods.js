@@ -82,7 +82,7 @@ const updateCard = new ValidatedMethod({
       if (pendingOrder) {
         try {
           StripeHelper.chargeCard({
-            customerId: stripeCustomer.stripeCustomerId,
+            customerId: customerStripeId,
             amount: pendingOrder.total_price * 100,
             description:
               `Re-trying failed charge for order ID ${pendingOrder.id} ` +
@@ -105,7 +105,7 @@ const updateCard = new ValidatedMethod({
         // system, in-case it has been changed.
         Subscription.updateCustomer({
           externalId: shopifyCustomer.id,
-          stripeCustomerId: stripeCustomer.stripeCustomerId
+          stripeCustomerId: customerStripeId
         });
 
         // Resume the subscription in MorePlease (if the last payment failed),
