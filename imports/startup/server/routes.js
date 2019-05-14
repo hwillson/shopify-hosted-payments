@@ -137,7 +137,8 @@ const RouteHandler = {
           Payments.findOne({
             email: payment.email,
             total_price: payment.total_price,
-            checkout_token: payment.checkout_token
+            checkout_token: payment.checkout_token,
+            status: 'completed'
           })
         ) {
           statusCode = 200;
