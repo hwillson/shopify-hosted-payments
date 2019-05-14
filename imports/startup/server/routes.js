@@ -10,9 +10,7 @@ import ShopifyResponse from '../../api/shopify/server/shopify_response';
 import CustomersCollection from '../../api/customers/collection';
 import Subscription from '../../api/subscriptions/server/subscription';
 import StripeHelper from '../../api/cards/server/stripe_helper';
-import loyaltyLion from '../../api/loyaltylion/server/loyaltylion';
 import klaviyo from '../../api/klaviyo/server/klaviyo';
-import hubspot from '../../api/hubspot/server/hubspot';
 import {
   recordDripEvent,
   updateDripSubscriber
@@ -461,36 +459,6 @@ const RouteHandler = {
       recordDripEvent(eventData);
       updateDripSubscriber(eventData);
       klaviyo.trackEvent(eventData);
-      hubspot.trackEvent(eventData);
-      switch (eventData.event) {
-        case 'New Subscription': {
-          loyaltyLion.changeToSubscriptionTier(
-            eventData.extra.externalCustomerId
-          );
-          break;
-        }
-        case 'Cancelled Subscription': {
-          loyaltyLion.changeToGoldTier(eventData.extra.externalCustomerId);
-          break;
-        }
-        case 'Paused Subscription': {
-          loyaltyLion.changeToGoldTier(eventData.extra.externalCustomerId);
-          break;
-        }
-        case 'Resumed Subscription': {
-          loyaltyLion.changeToSubscriptionTier(
-            eventData.extra.externalCustomerId
-          );
-          break;
-        }
-        case 'Payment Failed': {
-          loyaltyLion.changeToGoldTier(eventData.extra.externalCustomerId);
-          break;
-        }
-        default: {
-          // Do nothing
-        }
-      }
     }
     res.end();
   },
