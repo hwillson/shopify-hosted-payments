@@ -141,8 +141,7 @@ const RouteHandler = {
             status: 'completed'
           })
         ) {
-          statusCode = 200;
-          paymentResponse.success = true;
+          paymentResponse.success = false;
           paymentResponse.message = 'Card already charged; not charged again.';
         } else if (pendingTransactions[payment.checkout_token]) {
           // This is a second duplicate transaction safeguard, in-case the
