@@ -201,8 +201,12 @@ const Subscription = {
     if (orderData && orderData.customer) {
       customer.externalId = orderData.customer.id;
       customer.email = orderData.customer.email;
-      customer.firstName = orderData.customer.first_name;
-      customer.lastName = orderData.customer.last_name;
+      customer.firstName =
+        orderData.customer.first_name ||
+        orderData.customer.default_address.first_name;
+      customer.lastName =
+        orderData.customer.last_name ||
+        orderData.customer.default_address.last_name;
 
       try {
         const savedCustomer = CustomersCollection.findOne({
